@@ -1,0 +1,21 @@
+{
+    "components": [
+        {   "id": 1,
+            "name": "Cameron",
+            "type": "Man",
+            "connections": [2, 3]
+        },
+        {
+            "id": 2,
+            "name": "Jonathan",
+            "type": "Man",
+            "connections": [1, 3]
+        },
+        {
+            "id": 3,
+            "name": "Jazmin",
+            "type": "Woman",
+            "connections": [1, 2]
+        }
+    ]
+}
