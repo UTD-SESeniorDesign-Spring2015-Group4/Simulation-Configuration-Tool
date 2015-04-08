@@ -4,9 +4,8 @@
  */
 package simgui;
 
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
-import java.awt.GridLayout;
+import java.awt.*;
+import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
@@ -19,7 +18,9 @@ import java.io.FileWriter;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+
 import static javax.swing.JFrame.EXIT_ON_CLOSE;
+
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -31,6 +32,18 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+// These require java-json (http://www.json.org/java/).
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+// This requires json (https://code.google.com/p/google-gson/).
+import com.google.gson.*;
 
 public class SimGUI extends JFrame {
 
@@ -45,8 +58,21 @@ public class SimGUI extends JFrame {
     JPanel bottomPanel;
     double widthPercent = 0.33;
     double heightPercent = 0.75;
-    
-    //Make Component Class
+
+    //Make simgui.Component Class
+    //Use an array list to read all of the component names, and values (maybe types too)
+    //traverse through file or arraylist with for or for each loop
+    //Update GUI to reflect the changes (make jtext of arr[1, 2, etc]
+
+    // The location of the json file we will be importing.
+    /*
+    Take note of the structure of the JSON file as this is quite important. You can see the the outermost element of the
+    file is an array. You can tell this because it is surrounded by curly braces ('{' and '}'). Inside of that object,
+    we have a key ("Component") that is pointing to an array. You can tell it is an array as it is surrounded by square
+    brackets ('[' and ']'). Inside this array we have more objects each with two name-value pairs for "name" and "age".
+    This structure will be quite important to understand when we start parsing it out.
+     */
+    private static String mJsonFileLoc = "file.txt";
 
     public SimGUI(String[] labels, int[] fieldWidths) {
         super("Simulation Configuration"); // title of window
@@ -197,23 +223,109 @@ public class SimGUI extends JFrame {
     public static void main(String args[]) {
 
         String[] labels = {"Simulation Name",
-            "Simulation Type",
-            "Number of Users",
-            "WAN Roundtrip MS",
-            "Request Message Bytes",
-            "Response Message Bytes",
-            "Think Seconds"};
-        
+                "Simulation Type",
+                "Number of Users",
+                "WAN Roundtrip MS",
+                "Request Message Bytes",
+                "Response Message Bytes",
+                "Think Seconds"};
+
+        List<Component> components = new ArrayList<>();
+
+        // Read in the file containing JSON.
+        String json = readFile(mJsonFileLoc);
+        System.out.println("The file contained: " + json);
+
+        // Convert the JSON to a JSONObject.
+        /*
+        Notice that we are converting the JSON to a JSONObject, not a JSONArray. We are doing this because, as mentioned
+        earlier, the outermost element of the JSON in the file is an object.
+         */
+        JSONObject jsonObject;
+        try {
+            jsonObject = new JSONObject(json);
+        } catch (Exception e) {
+            System.err.println("Failed to convert the JSON to a JSONObject.");
+            e.printStackTrace();
+            jsonObject = new JSONObject();
+        }
+
+        // Get the nested array in the JSONObject.
+        /*
+        At this point, we have a JSONObject that we parsed from the JSON. The data that we really need is in the array
+        that is nested in this object. Looking at the JSON in the file, we can see that the array is the value to the
+        key "cpt". To fetch this array, we need to get the array in the object with the key "cpt".
+         */
+        JSONArray jsonArray;
+        try {
+            jsonArray = jsonObject.getJSONArray("components");
+        } catch (Exception e) {
+            System.err.println("Failed to get the JSONArray with key \"components\" from the JSONObject");
+            e.printStackTrace();
+            jsonArray = new JSONArray();
+        }
+
+        // Convert each "user" in the JSONArray to a Person object and put them in our people list.
+        /*
+        We now have our JSONArray that contains two objects, each with a person's information. We want to create new
+        Person objects out of each of these sets of information. To do that, we will iterate through the JSONArray and
+        use gson to magically convert the raw data to an object.
+         */
+        Gson gson = new Gson();
+        for (int i = 0; i < jsonArray.length(); i++) {
+            Component component;
+
+            // Convert each JSONObject in the JSONArray to a string as this is what gson acts on.
+            /*
+            Step by step, gson is going to be creating an object fromJson(). The JSON it will be converting from is
+            inside the object at the current index (i). Gson acts upon Strings, not JSONObjects. Because of this, we
+            need to convert the JSONObject to a string using its toString() method. The second parameter that
+            gson.fromJson takes is the Class the object we are creating is derived from.
+             */
+            try {
+                component = gson.fromJson(jsonArray.getJSONObject(i).toString(), java.awt.Component.class);
+            } catch (Exception e) {
+                System.err.println("Failed to convert the JSON at index " + i + " to a Component.");
+                e.printStackTrace();
+                component = new Component() {
+                };
+            }
+
+            // Add the newly created components to our component list.
+            components.add(component);
+        }
+
+        // Print the data for each person in our People list.
+        for (int i = 0; i < components.size(); i++) {
+            System.out.println(components.get(i));
+        }
+
         int[] fieldWidths = {10, // Simulation Name
-            10, // Simulation Type
-            10, // Number of Users
-            10, // WAN Roundtrip MS
-            10, // Request Message Bytes
-            10, // Response Message Bytes
-            10, // Think Seconds
+                10, // Simulation Type
+                10, // Number of Users
+                10, // WAN Roundtrip MS
+                10, // Request Message Bytes
+                10, // Response Message Bytes
+                10, // Think Seconds
         };
 
         new SimGUI(labels, fieldWidths);
+    }
+
+    /**
+     * Returns a string containing the contents of the specified file.
+     *
+     * @param fileLoc The location of the file that will have its contents returned.
+     * @return A string containing the contents of the specified file.
+     */
+    private static String readFile(String fileLoc) {
+        try {
+            return new Scanner(new File(fileLoc)).useDelimiter("\\Z").next();
+        } catch (Exception e) {
+            System.err.println("Failed to open the file. Make sure that mJsonFileLoc is pointing to the right location!.");
+            e.printStackTrace();
+            return "";
+        }
     }
 
     /*
@@ -336,7 +448,8 @@ public class SimGUI extends JFrame {
                 default:
                     JOptionPane.showMessageDialog(null, "Error in text fields", "Error " + result, JOptionPane.WARNING_MESSAGE);
                     break;
-            };
+            }
+            ;
         }
         return flag;
     }
