@@ -45,4 +45,9 @@ public class Component {
     public void setConnections(String connections) {
         this.connections = connections;
     }
+    
+    @Override
+    public String toString() {
+        return "Name: " + name;
+    }
 }

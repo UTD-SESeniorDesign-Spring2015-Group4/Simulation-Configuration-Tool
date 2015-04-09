@@ -68,8 +68,8 @@ public class SimGUI extends JFrame {
     /*
     Take note of the structure of the JSON file as this is quite important. You can see the the outermost element of the
     file is an array. You can tell this because it is surrounded by curly braces ('{' and '}'). Inside of that object,
-    we have a key ("Component") that is pointing to an array. You can tell it is an array as it is surrounded by square
-    brackets ('[' and ']'). Inside this array we have more objects each with two name-value pairs for "name" and "age".
+    we have a key ("components") that is pointing to an array. You can tell it is an array as it is surrounded by square
+    brackets ('[' and ']'). Inside this array we have more objects each with 4 fields for "id" "name" "type" "connections".
     This structure will be quite important to understand when we start parsing it out.
      */
     private static String mJsonFileLoc = "file.txt";
@@ -230,7 +230,7 @@ public class SimGUI extends JFrame {
                 "Response Message Bytes",
                 "Think Seconds"};
 
-        List<Component> components = new ArrayList<>();
+        List<simgui.Component> components = new ArrayList<>();
 
         // Read in the file containing JSON.
         String json = readFile(mJsonFileLoc);
@@ -265,15 +265,15 @@ public class SimGUI extends JFrame {
             jsonArray = new JSONArray();
         }
 
-        // Convert each "user" in the JSONArray to a Person object and put them in our people list.
+        // Convert each "user" in the JSONArray to a Component object and put them in our people list.
         /*
-        We now have our JSONArray that contains two objects, each with a person's information. We want to create new
-        Person objects out of each of these sets of information. To do that, we will iterate through the JSONArray and
+        We now have our JSONArray that contains two objects, each with a component's information. We want to create new
+        Component objects out of each of these sets of information. To do that, we will iterate through the JSONArray and
         use gson to magically convert the raw data to an object.
          */
         Gson gson = new Gson();
         for (int i = 0; i < jsonArray.length(); i++) {
-            Component component;
+            simgui.Component component;
 
             // Convert each JSONObject in the JSONArray to a string as this is what gson acts on.
             /*
@@ -283,12 +283,11 @@ public class SimGUI extends JFrame {
             gson.fromJson takes is the Class the object we are creating is derived from.
              */
             try {
-                component = gson.fromJson(jsonArray.getJSONObject(i).toString(), java.awt.Component.class);
+                component = gson.fromJson(jsonArray.getJSONObject(i).toString(), simgui.Component.class);
             } catch (Exception e) {
-                System.err.println("Failed to convert the JSON at index " + i + " to a Component.");
-                e.printStackTrace();
-                component = new Component() {
-                };
+                //System.err.println("Failed to convert the JSON at index " + i + " to a Component.");
+                //e.printStackTrace();
+                component = new simgui.Component();
             }
 
             // Add the newly created components to our component list.
@@ -516,6 +515,7 @@ public class SimGUI extends JFrame {
         return error;
     }
 
+    //Simulation Output
     public void startSimulation() {
         String jarDir = "";
         String tempDir = System.getProperty("java.io.tmpdir");
