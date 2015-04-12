@@ -6,6 +6,9 @@ import org.json.JSONObject;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -24,7 +27,7 @@ public class SimGUI extends JFrame {
     static File openFile;
     File saveFile;
     File outputFile;
-    String currentConfiguration;
+    Component currentConfiguration;
     JTextArea simulationOutput;
     JPanel mainPanel;
     JPanel bottomPanel;
@@ -51,6 +54,7 @@ public class SimGUI extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         //currentConfiguration = new String();
+        currentConfiguration = new Component();
 
         JScrollPane mainScrollPane;
         JScrollPane bottomScrollPane;
@@ -167,27 +171,30 @@ public class SimGUI extends JFrame {
                 if (returnValue == JFileChooser.APPROVE_OPTION) {
                     saveFile = saveFileChooser.getSelectedFile();
                     String fname = saveFile.getAbsolutePath();
-                    saveFile = new File(fname);
-
-                    PrintWriter writer = null;
-                    try {
-                        writer = new PrintWriter(fname, "UTF-8");
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
-                    } catch (UnsupportedEncodingException e) {
-                        e.printStackTrace();
+                    if (!fname.endsWith(".xml")) { // if saved file doesn't end with .xml extention, add the extension
+                        saveFile = new File(fname + ".xml");
                     }
-                    for (int i = 0; i < components.size(); i++) {
-                        currentConfiguration = components.get(i).toString() + " = " + fields[i].getText();
-                        System.out.println(currentConfiguration);
-                        writer.println(currentConfiguration);
-                    }
+                    //saveFile = new File(fname);
 
-                    writer.close();
+//                    PrintWriter writer = null;
+//                    try {
+//                        writer = new PrintWriter(fname, "UTF-8");
+//                    } catch (FileNotFoundException e) {
+//                        e.printStackTrace();
+//                    } catch (UnsupportedEncodingException e) {
+//                        e.printStackTrace();
+//                    }
+//                    for (int i = 0; i < components.size(); i++) {
+//                        currentConfiguration = components.get(i).toString() + " = " + fields[i].getText();
+//                        System.out.println(currentConfiguration);
+//                        writer.println(currentConfiguration);
+//                    }
+//
+//                    writer.close();
 //                    if (!fname.endsWith(".xml")) { // if saved file doesn't end with .xml extention, add the extension
 //                        saveFile = new File(fname + ".xml");
 //                    }
-                    //saveXML(saveFile);
+                    saveXML(saveFile);
                 }
             }
         };
@@ -252,82 +259,26 @@ public class SimGUI extends JFrame {
 
     public static void main(String args[]) {
 
-        List<simgui.Component> components = new ArrayList<>();
+        ArrayList<String> cpts = new ArrayList<>();
 
-        // Read in the file containing JSON.
-        String json = readFile("");
-        System.out.println("The file contained: \n" + json);
+        cpts.add("Simulation Name");
+        cpts.add("Simulation Type");
+        cpts.add("Number of Users");
+        cpts.add("WAN Roundtrip MS");
+        cpts.add("Request Message Bytes");
+        cpts.add("Response Message Bytes");
+        cpts.add("Think Seconds");
 
-        // Convert the JSON to a JSONObject.
-        /*
-        Notice that we are converting the JSON to a JSONObject, not a JSONArray. We are doing this because, as mentioned
-        earlier, the outermost element of the JSON in the file is an object.
-         */
-        JSONObject jsonObject;
-        try {
-            jsonObject = new JSONObject(json);
-        } catch (Exception e) {
-            System.err.println("Failed to convert the JSON to a JSONObject.");
-            e.printStackTrace();
-            jsonObject = new JSONObject();
-        }
+        int[] fieldWidths = {10, // Simulation Name
+                10, // Simulation Type
+                10, // Number of Users
+                10, // WAN Roundtrip MS
+                10, // Request Message Bytes
+                10, // Response Message Bytes
+                10, // Think Seconds
+        };
 
-        // Get the nested array in the JSONObject.
-        /*
-        At this point, we have a JSONObject that we parsed from the JSON. The data that we really need is in the array
-        that is nested in this object. Looking at the JSON in the file, we can see that the array is the value to the
-        key "components". To fetch this array, we need to get the array in the object with the key "components".
-         */
-        JSONArray jsonArray;
-        try {
-            jsonArray = jsonObject.getJSONArray("components");
-        } catch (Exception e) {
-            System.err.println("Failed to get the JSONArray with key \"components\" from the JSONObject");
-            e.printStackTrace();
-            jsonArray = new JSONArray();
-        }
-
-        // Convert each "component" in the JSONArray to a Component object and put them in our people list.
-        /*
-        We now have our JSONArray that contains two objects, each with a component's information. We want to create new
-        Component objects out of each of these sets of information. To do that, we will iterate through the JSONArray and
-        use gson to magically convert the raw data to an object.
-         */
-        Gson gson = new Gson();
-        for (int i = 0; i < jsonArray.length(); i++) {
-            simgui.Component component;
-
-            // Convert each JSONObject in the JSONArray to a string as this is what gson acts on.
-            /*
-            Step by step, gson is going to be creating an object fromJson(). The JSON it will be converting from is
-            inside the object at the current index (i). Gson acts upon Strings, not JSONObjects. Because of this, we
-            need to convert the JSONObject to a string using its toString() method. The second parameter that
-            gson.fromJson takes is the Class the object we are creating is derived from.
-             */
-            try {
-                component = gson.fromJson(jsonArray.getJSONObject(i).toString(), simgui.Component.class);
-            } catch (Exception e) {
-                System.err.println("Failed to convert the JSON at index " + i + " to a Component.");
-                e.printStackTrace();
-                component = new simgui.Component();
-            }
-
-            // Add the newly created components to our component list.
-            components.add(component);
-        }
-
-        // Print the data for each component in our Component list.
-        for (int i = 0; i < components.size(); i++) {
-            //System.out.println(components.get(i));
-        }
-
-
-        int[] fieldWidths = new int[components.size()];
-        for (int i = 0; i < components.size(); i++) {
-            fieldWidths[i] = 20;
-        }
-
-        new SimGUI(components, fieldWidths);
+        new SimGUI(cpts, fieldWidths);
     }
 
     /**
@@ -339,7 +290,7 @@ public class SimGUI extends JFrame {
     private static String readFile(String strFile) {
         try {
             JFileChooser openFileChooser = new JFileChooser();
-            FileNameExtensionFilter mfstFilter = new FileNameExtensionFilter("mfst files (*.mfst)", "mfst"); // filter to only show manifest files
+            FileNameExtensionFilter mfstFilter = new FileNameExtensionFilter("manf files (*.manf)", "manf"); // filter to only show manifest files
             openFileChooser.setFileFilter(mfstFilter);
             int returnValue = openFileChooser.showOpenDialog(null);
 
@@ -367,8 +318,27 @@ public class SimGUI extends JFrame {
 
     }
 
-    public int saveXML(File saveFile) {
+    public int saveXML(File tempFile) {
         int flag = createConfiguration();
+        try {
+            if (flag == 0) {
+                // create new jaxb context
+                JAXBContext jaxbContext = JAXBContext.newInstance(Component.class);
+
+                // create new marshaller to convert java object into a xml file
+                Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+
+                // formatted output
+                jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+
+                //System.out.println(currentConfiguration);
+                jaxbMarshaller.marshal(tempFile.getAbsolutePath(), tempFile);
+            }
+
+        } catch (JAXBException e) {
+            System.out.println("Not an XML Root annotated class");
+            e.printStackTrace();
+        }
         return flag;
     }
 
