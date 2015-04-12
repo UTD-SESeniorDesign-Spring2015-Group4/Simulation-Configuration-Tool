@@ -7,13 +7,6 @@ public class Component {
     private String type;
     private String connections;
 
-    public Component(String name, String id, String type, String connections) {
-        this.name = name;
-        this.id = id;
-        this.type = type;
-        this.connections = connections;
-    }
-
     public String getName() {
         return name;
     }
