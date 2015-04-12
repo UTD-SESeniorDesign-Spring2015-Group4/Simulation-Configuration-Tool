@@ -6,9 +6,6 @@ import org.json.JSONObject;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -47,7 +44,7 @@ public class SimGUI extends JFrame {
     brackets ('[' and ']'). Inside this array we have more objects each with 4 fields for "id" "name" "type" "connections".
     This structure will be quite important to understand when we start parsing it out.
      */
-    private static String mJsonFileLoc;
+    //private static String mJsonFileLoc;
 
     public SimGUI(List components, int[] fieldWidths) {
         super("Simulation Configuration"); // title of window
@@ -105,7 +102,7 @@ public class SimGUI extends JFrame {
          */
         ActionListener openBtnListener = new ActionListener() {
             public void actionPerformed(ActionEvent actionEvent) {
-                readFile(mJsonFileLoc);
+                String tempString = readFile("");
             }
         };
 
@@ -209,7 +206,7 @@ public class SimGUI extends JFrame {
         List<simgui.Component> components = new ArrayList<>();
 
         // Read in the file containing JSON.
-        String json = readFile(mJsonFileLoc);
+        String json = readFile("");
         System.out.println("The file contained: \n" + json);
 
         // Convert the JSON to a JSONObject.
@@ -287,10 +284,10 @@ public class SimGUI extends JFrame {
     /**
      * Returns a string containing the contents of the specified file.
      *
-     * @param mJsonFileLoc The location of the file that will have its contents returned.
+     * @param strFile The location of the file that will have its contents returned.
      * @return A string containing the contents of the specified file.
      */
-    private static String readFile(String mJsonFileLoc) {
+    private static String readFile(String strFile) {
         try {
             JFileChooser openFileChooser = new JFileChooser();
             FileNameExtensionFilter mfstFilter = new FileNameExtensionFilter("mfst files (*.mfst)", "mfst"); // filter to only show manifest files
@@ -299,10 +296,10 @@ public class SimGUI extends JFrame {
 
             if (returnValue == JFileChooser.APPROVE_OPTION) {
                 openFile = openFileChooser.getSelectedFile();
-                mJsonFileLoc = openFile.getAbsolutePath();
-                //currentConfiguration = openFile;
+                strFile = openFile.getAbsolutePath();
             }
-            return new Scanner(new File(mJsonFileLoc)).useDelimiter("\\Z").next();
+            strFile = new Scanner(new File(strFile)).useDelimiter("\\Z").next();
+            return strFile;
         } catch (Exception e) {
             System.err.println("Failed to open the file. Make sure that mJsonFileLoc is pointing to the right location!.");
             e.printStackTrace();
@@ -310,31 +307,6 @@ public class SimGUI extends JFrame {
         }
     }
 
-    /*
-     * Name: readXML
-     * Input: File
-     * Output: Simulationrun
-     * Function: Creates a new JAXB object, reads in the XML file, and then converts the XML into a Simulationrun object
-     */
-    public static Simulationrun readXML(File inFile) {
-        try {
-
-            // create new jaxb context
-            JAXBContext jaxbContext = JAXBContext.newInstance(Simulationrun.class);
-
-            // create new Unmarshaller  to convert xml to java object
-            Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
-
-            // create configuration object from unmarshaller
-            Simulationrun readConfiguration = (Simulationrun) jaxbUnmarshaller.unmarshal(inFile);
-
-            return readConfiguration;
-
-        } catch (JAXBException e) { // catch if input
-            e.printStackTrace();
-        }
-        return null;
-    }
 
     /*
      * Name: populateTextFiledUponFileOpen
@@ -348,24 +320,6 @@ public class SimGUI extends JFrame {
 
     public int saveXML(File saveFile) {
         int flag = createConfiguration();
-        try {
-            if (flag == 0) {
-//                // create new jaxb context
-//                JAXBContext jaxbContext = JAXBContext.newInstance(Simulationrun.class);
-//
-//                // create new marshaller to convert java object into a xml file
-//                Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
-//
-//                // formatted output
-//                jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-//
-//                jaxbMarshaller.marshal(currentConfiguration, saveFile);
-            }
-
-        } catch (Exception e) {
-            System.out.println("Code failed in Save XML");
-            e.printStackTrace();
-        }
         return flag;
     }
 
@@ -377,6 +331,7 @@ public class SimGUI extends JFrame {
 
             for (int i = 0; i < values.length; i++) {
                 values[i] = fields[i].getText();
+                //System.out.println(values[i]);
             }
 
             //currentConfiguration = new Simulationrun(values);
@@ -493,7 +448,6 @@ public class SimGUI extends JFrame {
                 }
             }
         }
-        System.out.println("Error in Validate Fields method is: " + error);
         return error;
     }
 
@@ -507,7 +461,7 @@ public class SimGUI extends JFrame {
         String errors = "";
         int flag;
 
-        tempFile = new File(tempDir + "\\temp.xml");
+        tempFile = new File(tempDir + "\\temp");
 
         flag = saveXML(tempFile);
         if (flag == 0) { // no errors during save - ie all entries are valid
