@@ -5,7 +5,7 @@ public class Component {
     private String name;
     private String id;
     private String type;
-    private String connections;
+    private String[] connections;
 
     public String getName() {
         return name;
@@ -31,16 +31,16 @@ public class Component {
         this.type = type;
     }
 
-    public String getConnections() {
+    public String[] getConnections() {
         return connections;
     }
 
-    public void setConnections(String connections) {
+    public void setConnections(String[] connections) {
         this.connections = connections;
     }
-    
+
     @Override
     public String toString() {
-        return "Name: " + name;
+        return name;
     }
 }
