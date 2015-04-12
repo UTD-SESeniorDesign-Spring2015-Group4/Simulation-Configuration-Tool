@@ -102,7 +102,56 @@ public class SimGUI extends JFrame {
          */
         ActionListener openBtnListener = new ActionListener() {
             public void actionPerformed(ActionEvent actionEvent) {
-                String tempString = readFile("");
+                List<simgui.Component> components = new ArrayList<>();
+                setVisible(false);
+                String json = readFile("");
+                System.out.println("The file contained: \n" + json);
+                JSONObject jsonObject;
+                try {
+                    jsonObject = new JSONObject(json);
+                } catch (Exception e) {
+                    System.err.println("Failed to convert the JSON to a JSONObject.");
+                    e.printStackTrace();
+                    jsonObject = new JSONObject();
+                }
+
+                JSONArray jsonArray;
+                try {
+                    jsonArray = jsonObject.getJSONArray("components");
+                } catch (Exception e) {
+                    System.err.println("Failed to get the JSONArray with key \"components\" from the JSONObject");
+                    e.printStackTrace();
+                    jsonArray = new JSONArray();
+                }
+
+                Gson gson = new Gson();
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    simgui.Component component;
+
+                    try {
+                        component = gson.fromJson(jsonArray.getJSONObject(i).toString(), simgui.Component.class);
+                    } catch (Exception e) {
+                        System.err.println("Failed to convert the JSON at index " + i + " to a Component.");
+                        e.printStackTrace();
+                        component = new simgui.Component();
+                    }
+
+                    // Add the newly created components to our component list.
+                    components.add(component);
+                }
+
+                // Print the data for each component in our Component list.
+                for (int i = 0; i < components.size(); i++) {
+                    //System.out.println(components.get(i));
+                }
+
+
+                int[] fieldWidths = new int[components.size()];
+                for (int i = 0; i < components.size(); i++) {
+                    fieldWidths[i] = 20;
+                }
+
+                new SimGUI(components, fieldWidths);
             }
         };
 
