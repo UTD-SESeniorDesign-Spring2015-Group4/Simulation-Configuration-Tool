@@ -3,12 +3,20 @@ package simgui;
 import com.google.gson.Gson;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -27,7 +35,7 @@ public class SimGUI extends JFrame {
     static File openFile;
     File saveFile;
     File outputFile;
-    Component currentConfiguration;
+    String currentConfiguration;
     JTextArea simulationOutput;
     JPanel mainPanel;
     JPanel bottomPanel;
@@ -54,7 +62,6 @@ public class SimGUI extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         //currentConfiguration = new String();
-        currentConfiguration = new Component();
 
         JScrollPane mainScrollPane;
         JScrollPane bottomScrollPane;
@@ -171,11 +178,11 @@ public class SimGUI extends JFrame {
                 if (returnValue == JFileChooser.APPROVE_OPTION) {
                     saveFile = saveFileChooser.getSelectedFile();
                     String fname = saveFile.getAbsolutePath();
-                    if (!fname.endsWith(".xml")) { // if saved file doesn't end with .xml extention, add the extension
-                        saveFile = new File(fname + ".xml");
-                    }
-                    //saveFile = new File(fname);
-
+//                    if (!fname.endsWith(".xml")) { // if saved file doesn't end with .xml extention, add the extension
+//                        saveFile = new File(fname + ".xml");
+//                    }
+//                    saveFile = new File(fname);
+//
 //                    PrintWriter writer = null;
 //                    try {
 //                        writer = new PrintWriter(fname, "UTF-8");
@@ -191,10 +198,43 @@ public class SimGUI extends JFrame {
 //                    }
 //
 //                    writer.close();
-//                    if (!fname.endsWith(".xml")) { // if saved file doesn't end with .xml extention, add the extension
-//                        saveFile = new File(fname + ".xml");
-//                    }
-                    saveXML(saveFile);
+//                    //saveXML(saveFile);
+                    try {
+
+                        DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+                        DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
+
+                        // root elements
+                        Document doc = docBuilder.newDocument();
+                        Element rootElement = doc.createElement("component");
+                        doc.appendChild(rootElement);
+
+                        for (int i = 0; i < components.size(); i++) {
+                            // component elements
+                            //System.out.println(components.get(i).toString());
+                            Element component = doc.createElement(components.get(i).toString().replaceAll("\\s",""));
+                            component.appendChild(doc.createTextNode(fields[i].getText()));
+                            rootElement.appendChild(component);
+                            //System.out.println(component + " " + fields[i].getText());
+                        }
+
+                        // write the content into xml file
+                        TransformerFactory transformerFactory = TransformerFactory.newInstance();
+                        Transformer transformer = transformerFactory.newTransformer();
+                        DOMSource source = new DOMSource(doc);
+                        StreamResult result = new StreamResult(new File(fname));
+
+                        transformer.transform(source, result);
+
+                        System.out.println("File saved!");
+
+                    } catch (ParserConfigurationException e) {
+                        e.printStackTrace();
+                    } catch (TransformerConfigurationException e) {
+                        e.printStackTrace();
+                    } catch (TransformerException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         };
@@ -320,25 +360,25 @@ public class SimGUI extends JFrame {
 
     public int saveXML(File tempFile) {
         int flag = createConfiguration();
-        try {
-            if (flag == 0) {
-                // create new jaxb context
-                JAXBContext jaxbContext = JAXBContext.newInstance(Component.class);
-
-                // create new marshaller to convert java object into a xml file
-                Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
-
-                // formatted output
-                jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-
-                //System.out.println(currentConfiguration);
-                jaxbMarshaller.marshal(tempFile.getAbsolutePath(), tempFile);
-            }
-
-        } catch (JAXBException e) {
-            System.out.println("Not an XML Root annotated class");
-            e.printStackTrace();
-        }
+//        try {
+//            if (flag == 0) {
+//                // create new jaxb context
+//                JAXBContext jaxbContext = JAXBContext.newInstance(Simulationrun.class);
+//
+//                // create new marshaller to convert java object into a xml file
+//                Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+//
+//                // formatted output
+//                jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+//
+//                //System.out.println(currentConfiguration);
+//                jaxbMarshaller.marshal(currentConfiguration, tempFile);
+//            }
+//
+//        } catch (JAXBException e) {
+//            System.out.println("Not an XML Root annotated class");
+//            e.printStackTrace();
+//        }
         return flag;
     }
 
