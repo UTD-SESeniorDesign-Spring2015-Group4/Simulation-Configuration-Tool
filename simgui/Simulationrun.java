@@ -161,7 +161,7 @@ public class Simulationrun {
                          Map<JTextField, Component> responseQueueFieldMap) {
         setruntitle(fields.get(0).getText());
         setsimtype(fields.get(1).getText());
-        setnumusers(fields.get(1).getText());
+        setnumusers(fields.get(2).getText());
         setwanroundtripms(fields.get(3).getText());
         setrequestmsgbytes(fields.get(4).getText());
         setresponsemsgbytes(fields.get(5).getText());
@@ -220,32 +220,32 @@ public class Simulationrun {
             else if(responseServiceFieldMap.containsKey(field)) {
                 String type = responseServiceFieldMap.get(field).getType();
                 if(type.equals("ApplicationServer")) {
-                    setreqappsecs(field.getText());
+                    setrspappsecs(field.getText());
                 }
                 else if(type.equals("MiddlewareServer")) {
-                    setreqmidsecs(field.getText());
+                    setrspmidsecs(field.getText());
                 }
                 else if(type.equals("WebfrontendServer")) {
-                    setreqwebsecs(field.getText());
+                    setrspwebsecs(field.getText());
                 }
                 else if(type.equals("Loadbalancer")) {
-                    setreqlbsecs(field.getText());
+                    setrsplbsecs(field.getText());
                 }
 
             }
             else if(responseQueueFieldMap.containsKey(field)) {
                 String type = responseQueueFieldMap.get(field).getType();
                 if(type.equals("ApplicationServer")) {
-                    setreqappquesecs(field.getText());
+                    setrspappquesecs(field.getText());
                 }
                 else if(type.equals("MiddlewareServer")) {
-                    setreqmidquesecs(field.getText());
+                    setrspmidquesecs(field.getText());
                 }
                 else if(type.equals("WebfrontendServer")) {
-                    setreqwebquesecs(field.getText());
+                    setrspwebquesecs(field.getText());
                 }
                 else if(type.equals("Loadbalancer")) {
-                    setreqlbquesecs(field.getText());
+                    setrsplbquesecs(field.getText());
                 }
             }
         }
