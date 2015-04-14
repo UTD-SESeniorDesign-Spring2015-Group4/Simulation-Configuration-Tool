@@ -48,6 +48,9 @@ public class SimGUI extends JFrame {
     Object mouseClick;
     Map<JTextField, Component> requestServiceFieldMap, requestQueueFieldMap, responseServiceFieldMap, responseQueueFieldMap;
 
+    // Will be set to true if we have read in a custom topology configuration, false otherwise.
+    boolean customConfig = true;
+
     //Make simgui.Component Class
     //Use an array list to read all of the component names, and values (maybe types too)
     //traverse through arraylist with for or for each loop
@@ -150,8 +153,7 @@ public class SimGUI extends JFrame {
             defaultLabels.add("Response Web Queue Time Seconds");
             defaultLabels.add("Response Load Balance Service Time Seconds");
             defaultLabels.add("Response Load Balance Queue Time Seconds");
-
-
+            customConfig = false;
         }
 
         for(int i = 0; i < defaultLabels.size(); i++){
@@ -535,7 +537,11 @@ public class SimGUI extends JFrame {
                 values[i] = fields.get(i).getText();
             }
 
-            currentConfig = new Simulationrun(fields, requestServiceFieldMap, requestQueueFieldMap, responseServiceFieldMap, responseQueueFieldMap);
+            if (customConfig) {
+                currentConfig = new Simulationrun(fields, requestServiceFieldMap, requestQueueFieldMap, responseServiceFieldMap, responseQueueFieldMap);
+            } else {
+                currentConfig = new Simulationrun(values);
+            }
         } else {
             flag = 1;
             switch (result) {
