@@ -10,6 +10,7 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -24,9 +25,8 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Scanner;
 
 // These require java-json (http://www.json.org/java/).
 // This requires json (https://code.google.com/p/google-gson/).
@@ -46,6 +46,7 @@ public class SimGUI extends JFrame {
     double heightPercent = 0.75;
     Simulationrun currentConfig;
     Object mouseClick;
+    Map<JTextField, Component> requestServiceFieldMap, requestQueueFieldMap, responseServiceFieldMap, responseQueueFieldMap;
 
     //Make simgui.Component Class
     //Use an array list to read all of the component names, and values (maybe types too)
@@ -91,6 +92,10 @@ public class SimGUI extends JFrame {
         getContentPane().add(bottomPanel, BorderLayout.SOUTH);
 
         fields = new ArrayList<JTextField>();
+        requestServiceFieldMap = new HashMap<JTextField, Component>();
+        requestQueueFieldMap = new HashMap<JTextField, Component>();
+        responseServiceFieldMap = new HashMap<JTextField, Component>();
+        responseQueueFieldMap = new HashMap<JTextField, Component>();
 
         /*
          * Creating the text fields, setting their width, creating their label, adding label to the label panel, adding text field to text field panel.
@@ -140,6 +145,7 @@ public class SimGUI extends JFrame {
             defaultLabels.add("Response Application Service Time Seconds");
             defaultLabels.add("Response Application Queue Time Seconds");
             defaultLabels.add("Response MiddleWare Service Time Seconds");
+            defaultLabels.add("Response MiddleWare Queue Time Seconds");
             defaultLabels.add("Response Web Service Time Seconds");
             defaultLabels.add("Response Web Queue Time Seconds");
             defaultLabels.add("Response Load Balance Service Time Seconds");
@@ -161,27 +167,57 @@ public class SimGUI extends JFrame {
         }
         if(components != null) {
             for (int i = 0; i < components.size(); i++) {
-                // Create Service time field
-                JLabel labService = new JLabel(components.get(i).getServiceFieldLabel(), JLabel.LEFT);
+                Component component = components.get(i);
+                String type = component.getType();
+                // Create Request Service time field
+                JLabel labService = new JLabel(component.getRequestServiceFieldLabel(), JLabel.LEFT);
                 labelPanel.add(labService);
 
                 JPanel pService = new JPanel(new FlowLayout(FlowLayout.LEFT));
                 JTextField fieldService = new JTextField();
                 fieldService.setColumns(20);
                 fields.add(fieldService);
+                requestServiceFieldMap.put(fieldService, component);
                 pService.add(fieldService);
                 fieldPanel.add(pService);
 
-                // Create Queue time field
-                JLabel labQueue = new JLabel(components.get(i).getQueueFieldLabel(), JLabel.LEFT);
+                // Create Request Queue time field
+                JLabel labQueue = new JLabel(component.getRequestQueueFieldLabel(), JLabel.LEFT);
                 labelPanel.add(labQueue);
 
                 JPanel pQueue = new JPanel(new FlowLayout(FlowLayout.LEFT));
                 JTextField fieldQueue = new JTextField();
                 fieldQueue.setColumns(20);
                 fields.add(fieldQueue);
+                requestQueueFieldMap.put(fieldQueue, component);
                 pQueue.add(fieldQueue);
                 fieldPanel.add(pQueue);
+
+                if(type.equals("ApplicationServer") || type.equals("MiddlewareServer") || type.equals("WebfrontendServer") || type.equals("Loadbalancer")) {
+                    // Create Response Service time field
+                    JLabel labRspService = new JLabel(component.getResponseServiceFieldLabel(), JLabel.LEFT);
+                    labelPanel.add(labRspService);
+
+                    JPanel pRspService = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                    JTextField fieldRspService = new JTextField();
+                    fieldRspService.setColumns(20);
+                    fields.add(fieldRspService);
+                    responseServiceFieldMap.put(fieldRspService, component);
+                    pRspService.add(fieldRspService);
+                    fieldPanel.add(pRspService);
+
+                    // Create Response Queue time field
+                    JLabel labRspQueue = new JLabel(component.getResponseQueueFieldLabel(), JLabel.LEFT);
+                    labelPanel.add(labRspQueue);
+
+                    JPanel pRspQueue = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                    JTextField fieldRspQueue = new JTextField();
+                    fieldRspQueue.setColumns(20);
+                    fields.add(fieldRspQueue);
+                    responseQueueFieldMap.put(fieldRspQueue, component);
+                    pRspQueue.add(fieldRspQueue);
+                    fieldPanel.add(pRspQueue);
+                }
             }
         }
 
@@ -258,6 +294,7 @@ public class SimGUI extends JFrame {
             }
         };
 
+        // TODO: put this back the way it was using saveXML
         //action listener for save button.
         ActionListener saveBtnListener = new ActionListener() {
             public void actionPerformed(ActionEvent actionEvent) {
@@ -417,6 +454,7 @@ public class SimGUI extends JFrame {
         }
     }
 
+    // TODO: Make this work with our dynamic fields
     public void populateTextFieldsUponFileOpen(Simulationrun currentConfiguration) {
 
         fields.get(0).setText(currentConfiguration.getruntitle());
@@ -464,10 +502,28 @@ public class SimGUI extends JFrame {
         fields.get(26).setText(currentConfiguration.getrsplbquesecs());
     }
 
-    public int saveXML(File tempFile) {
+    public int saveXML(File saveFile) {
         int flag = createConfiguration();
+        try {
+            if (flag == 0) {
+                // create new jaxb context
+                JAXBContext jaxbContext = JAXBContext.newInstance(Simulationrun.class);
+
+                // create new marshaller to convert java object into a xml file
+                Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+
+                // formatted output
+                jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+
+                jaxbMarshaller.marshal(currentConfig, saveFile);
+            }
+
+        } catch (JAXBException e) {
+            e.printStackTrace();
+        }
         return flag;
     }
+
 
     public int createConfiguration() {
         int flag = 0;
@@ -479,6 +535,7 @@ public class SimGUI extends JFrame {
                 values[i] = fields.get(i).getText();
             }
 
+            currentConfig = new Simulationrun(fields, requestServiceFieldMap, requestQueueFieldMap, responseServiceFieldMap, responseQueueFieldMap);
         } else {
             flag = 1;
             switch (result) {
@@ -618,14 +675,11 @@ public class SimGUI extends JFrame {
     //Simulation Output
     public void startSimulation() {
         String jarDir = "";
-        String tempDir = System.getProperty("java.io.tmpdir");
-        File tempFile = null;
+        File tempFile = new File(System.getProperty("java.io.tmpdir"), "temp");
 
         String results = "";
         String errors = "";
         int flag;
-
-        tempFile = new File(tempDir + "\\temp");
 
         flag = saveXML(tempFile);
         if (flag == 0) { // no errors during save - ie all entries are valid
