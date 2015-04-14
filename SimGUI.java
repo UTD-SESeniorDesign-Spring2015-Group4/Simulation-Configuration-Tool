@@ -3,9 +3,23 @@ package simgui;
 import com.google.gson.Gson;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -30,6 +44,8 @@ public class SimGUI extends JFrame {
     JPanel bottomPanel;
     double widthPercent = 0.33;
     double heightPercent = 0.75;
+    Simulationrun currentConfig;
+    Object mouseClick;
 
     //Make simgui.Component Class
     //Use an array list to read all of the component names, and values (maybe types too)
@@ -44,19 +60,20 @@ public class SimGUI extends JFrame {
     brackets ('[' and ']'). Inside this array we have more objects each with 4 fields for "id" "name" "type" "connections".
     This structure will be quite important to understand when we start parsing it out.
      */
-    //private static String mJsonFileLoc;
 
-    public SimGUI(List components, int[] fieldWidths) {
+    public SimGUI(List components, int[] fieldWidths, List cmpts) {
         super("Simulation Configuration"); // title of window
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
-        //currentConfiguration = new String();
-
         JScrollPane mainScrollPane;
         JScrollPane bottomScrollPane;
-        mainPanel = new JPanel(new BorderLayout()); // panel to hold text fields and their labels
+        mainPanel = new JPanel(new GridLayout()); // panel to hold text fields and their labels
         JPanel labelPanel = new JPanel(new GridLayout(components.size(), 1)); // panel to hold text field labels
         JPanel fieldPanel = new JPanel(new GridLayout(components.size(), 1)); // panel to hold text fields
+
+        JPanel defaultLabel = new JPanel(new GridLayout(cmpts.size(), 1));
+        JPanel defaultField = new JPanel(new GridLayout(cmpts.size(), 1));
+
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT)); // panel to hold buttons
         bottomPanel = new JPanel(new BorderLayout()); // panel to hold simulation results
         JPanel bottomLabelPanel = new JPanel(new GridLayout(1, 1)); // panel for simulation results label
@@ -65,9 +82,16 @@ public class SimGUI extends JFrame {
         JButton saveBtn = new JButton("Save Configuration"); // button to save an XML file
         JButton startBtn = new JButton("Start"); // button to start the simulation
         JButton outputBtn = new JButton("Save Output"); // button to save simulation results
+        JButton manfBtn = new JButton("Open Manifest File"); // button to open manf file
 
         simulationOutput = new JTextArea(15, 25); // text area to hold simulation results
         JLabel outputLabel = new JLabel("Simulation Output: ", JLabel.LEFT); // label for simulation results
+
+        if(!cmpts.isEmpty()){
+            mainPanel = new JPanel(new GridLayout(2, 1));
+            mainPanel.add(defaultLabel, BorderLayout.WEST);
+            mainPanel.add(defaultField, BorderLayout.CENTER);
+        }
 
         mainPanel.add(labelPanel, BorderLayout.WEST);
         mainPanel.add(fieldPanel, BorderLayout.CENTER);
@@ -80,28 +104,93 @@ public class SimGUI extends JFrame {
         /*
          * Creating the text fields, setting their width, creating their label, adding label to the label panel, adding text field to text field panel.
          */
+
+        /* Cameron this is the part that I added in, but it is not working right.
+            My logic is that if the manf button is clicked it will display
+            the request and response labels then the component name.
+            This is what I understood from both your example and Jon's example.
+            So basically it should display Request WAN Service Time Seconds (Cameron)
+                                            Request WAN Queue Time Seconds (Cameron)
+                                            so and and so forth.
+            I did this because it Jon sent me this
+            "Request WAN Service Time Seconds (<insert component name here>)"
+            So that is what I understood.
+            He also said this "It didn't look like each component had the two required fields either, have you fixed that?"
+            But I didn't get a chance to clarify, so no I dont think I have this done.
+            I'm going to ask Jon if he wanted the request and response stuff listed out like the original java program
+            but each component name will be displayed next to one.
+            Because that's going to be a shit load of lines.
+            It's 6am and I'm exhausted, so I'm really not making any progress.
+         */
+        ArrayList<String> timeSec = new ArrayList<>();
+
+        timeSec.add("Request WAN Service Time Seconds");
+        timeSec.add("Request WAN Queue Time Seconds");
+        timeSec.add("Request Load Balance Service Time Seconds");
+        timeSec.add("Request Load Balance Queue Time Seconds");
+        timeSec.add("Request Web Service Time Seconds");
+        timeSec.add("Request Web Queue Time Seconds");
+        timeSec.add("Request MiddleWare Service Time Seconds");
+        timeSec.add("Request MiddleWare Queue Time Seconds");
+        timeSec.add("Request Application Service Time Seconds");
+        timeSec.add("Request Application Queue Time Seconds");
+        timeSec.add("Request Database Service Time Seconds");
+        timeSec.add("Request Database Queue Time Seconds");
+        timeSec.add("Response Application Service Time Seconds");
+        timeSec.add("Response Application Queue Time Seconds");
+        timeSec.add("Response MiddleWare Service Time Seconds");
+        timeSec.add("Response Web Service Time Seconds");
+        timeSec.add("Response Web Queue Time Seconds");
+        timeSec.add("Response Load Balance Service Time Seconds");
+        timeSec.add("Response Load Balance Queue Time Seconds");
+
         for (int i = 0; i < components.size(); i++) {
             fields[i] = new JTextField();
             fields[i].setColumns(components.size());
-            JLabel lab = new JLabel(components.get(i).toString(), JLabel.LEFT);
-            lab.setLabelFor(fields[i]);
+            // checks what the source of the mouse click was, i dont think this is working at all
+            if(mouseClick == manfBtn){
+                // This format should work they way I think it will.
+                for(int j = 0; j < timeSec.size(); j++){
+                    JLabel lab = new JLabel(timeSec.get(j) + " (" + components.get(i).toString() + ")", JLabel.LEFT);
+                    lab.setLabelFor(fields[i]);
+                    labelPanel.add(lab);
 
-            labelPanel.add(lab);
+                    JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                    p.add(fields[i]);
+                    fieldPanel.add(p);
+                }
+            }
+            else {
+                JLabel lab = new JLabel(components.get(i).toString(), JLabel.LEFT);
+                lab.setLabelFor(fields[i]);
+                labelPanel.add(lab);
+
+                JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                p.add(fields[i]);
+                fieldPanel.add(p);
+            }
+        }
+
+        for (int i = 0; i < cmpts.size(); i++) {
+            fields[i] = new JTextField();
+            fields[i].setColumns(cmpts.size());
+            JLabel lab = new JLabel(cmpts.get(i).toString(), JLabel.LEFT);
+            lab.setLabelFor(fields[i]);
+            defaultLabel.add(lab);
 
             JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
             p.add(fields[i]);
-            fieldPanel.add(p);
+            defaultField.add(p);
         }
 
         mainScrollPane = new JScrollPane(mainPanel); // scroll pane to hold text fields and their labels.
         mainScrollPane.getVerticalScrollBar().setUnitIncrement(16); // increase scroll speed
         getContentPane().add(mainScrollPane, BorderLayout.CENTER);
 
-        /*
-         * Action listener for the open button. Creates a JFile Chooser dialog box and gets the file they user selects.
-         */
-        ActionListener openBtnListener = new ActionListener() {
+        // Action listener for the manf button
+        ActionListener manfBtnListener = new ActionListener(){
             public void actionPerformed(ActionEvent actionEvent) {
+                mouseClick = actionEvent.getSource();
                 List<simgui.Component> components = new ArrayList<>();
                 setVisible(false);
                 String json = readFile("");
@@ -138,20 +227,45 @@ public class SimGUI extends JFrame {
 
                     // Add the newly created components to our component list.
                     components.add(component);
+
                 }
 
-                // Print the data for each component in our Component list.
-                for (int i = 0; i < components.size(); i++) {
-                    //System.out.println(components.get(i));
-                }
+                ArrayList<String> cmpts = new ArrayList<>();
 
+                cmpts.add("Simulation Name");
+                cmpts.add("Simulation Type");
+                cmpts.add("Number of Users");
+                cmpts.add("WAN Roundtrip MS");
+                cmpts.add("Request Message Bytes");
+                cmpts.add("Response Message Bytes");
+                cmpts.add("Think Seconds");
 
-                int[] fieldWidths = new int[components.size()];
+                int[] fieldWidths = new int[components.size()+cmpts.size()];
                 for (int i = 0; i < components.size(); i++) {
                     fieldWidths[i] = 20;
                 }
 
-                new SimGUI(components, fieldWidths);
+                new SimGUI(components, fieldWidths, cmpts);
+            }
+        };
+
+        /*
+         * Action listener for the open button. Creates a JFile Chooser dialog box and gets the file they user selects.
+         */
+        ActionListener openBtnListener = new ActionListener() {
+            public void actionPerformed(ActionEvent actionEvent) {
+                JFileChooser openFileChooser = new JFileChooser();
+                FileNameExtensionFilter xmlFilter = new FileNameExtensionFilter("xml files (*.xml)", "xml"); // filter to only show xml files
+                openFileChooser.setFileFilter(xmlFilter);
+                int returnValue = openFileChooser.showOpenDialog(null);
+
+                if (returnValue == JFileChooser.APPROVE_OPTION) {
+                    openFile = openFileChooser.getSelectedFile();
+
+                    currentConfig = readXML(openFile);
+
+                    populateTextFieldsUponFileOpen(currentConfig);
+                }
             }
         };
 
@@ -167,27 +281,42 @@ public class SimGUI extends JFrame {
                 if (returnValue == JFileChooser.APPROVE_OPTION) {
                     saveFile = saveFileChooser.getSelectedFile();
                     String fname = saveFile.getAbsolutePath();
-                    saveFile = new File(fname);
 
-                    PrintWriter writer = null;
                     try {
-                        writer = new PrintWriter(fname, "UTF-8");
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
-                    } catch (UnsupportedEncodingException e) {
-                        e.printStackTrace();
-                    }
-                    for (int i = 0; i < components.size(); i++) {
-                        currentConfiguration = components.get(i).toString() + " = " + fields[i].getText();
-                        System.out.println(currentConfiguration);
-                        writer.println(currentConfiguration);
-                    }
 
-                    writer.close();
-//                    if (!fname.endsWith(".xml")) { // if saved file doesn't end with .xml extention, add the extension
-//                        saveFile = new File(fname + ".xml");
-//                    }
-                    //saveXML(saveFile);
+                        DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+                        DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
+
+                        // root elements
+                        Document doc = docBuilder.newDocument();
+                        Element rootElement = doc.createElement("component");
+                        doc.appendChild(rootElement);
+
+                        for (int i = 0; i < components.size(); i++) {
+                            // component elements
+
+                            Element component = doc.createElement(components.get(i).toString().replaceAll("\\s",""));
+                            component.appendChild(doc.createTextNode(fields[i].getText()));
+                            rootElement.appendChild(component);
+                        }
+
+                        // write the content into xml file
+                        TransformerFactory transformerFactory = TransformerFactory.newInstance();
+                        Transformer transformer = transformerFactory.newTransformer();
+                        DOMSource source = new DOMSource(doc);
+                        StreamResult result = new StreamResult(new File(fname));
+
+                        transformer.transform(source, result);
+
+                        System.out.println("File saved!");
+
+                    } catch (ParserConfigurationException e) {
+                        e.printStackTrace();
+                    } catch (TransformerConfigurationException e) {
+                        e.printStackTrace();
+                    } catch (TransformerException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         };
@@ -224,16 +353,17 @@ public class SimGUI extends JFrame {
             }
         };
 
-
         openBtn.addActionListener(openBtnListener);
         saveBtn.addActionListener(saveBtnListener);
         startBtn.addActionListener(startBtnListener);
         outputBtn.addActionListener(outputBtnListener);
+        manfBtn.addActionListener(manfBtnListener);
 
         topPanel.add(openBtn);
         topPanel.add(saveBtn);
         topPanel.add(startBtn);
         topPanel.add(outputBtn);
+        topPanel.add(manfBtn);
 
         bottomLabelPanel.add(outputLabel);
         outputLabel.setLabelFor(simulationOutput);
@@ -245,89 +375,91 @@ public class SimGUI extends JFrame {
         bottomPanel.add(bottomLabelPanel, BorderLayout.WEST);
 
         pack();
-        //Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        //setSize( (int) (screenSize.width * widthPercent), (int) (screenSize.height * heightPercent));
         setVisible(true);
     }
 
     public static void main(String args[]) {
 
-        List<simgui.Component> components = new ArrayList<>();
+        ArrayList<String> cpts = new ArrayList<>();
+        ArrayList<String> cmpts = new ArrayList<>();
 
-        // Read in the file containing JSON.
-        String json = readFile("");
-        System.out.println("The file contained: \n" + json);
+        cpts.add("Simulation Name");
+        cpts.add("Simulation Type");
+        cpts.add("Number of Users");
+        cpts.add("WAN Roundtrip MS");
+        cpts.add("Request Message Bytes");
+        cpts.add("Response Message Bytes");
+        cpts.add("Think Seconds");
+        cpts.add("Request WAN Service Time Seconds");
+        cpts.add("Request WAN Queue Time Seconds");
+        cpts.add("Request Load Balance Service Time Seconds");
+        cpts.add("Request Load Balance Queue Time Seconds");
+        cpts.add("Request Web Service Time Seconds");
+        cpts.add("Request Web Queue Time Seconds");
+        cpts.add("Request MiddleWare Service Time Seconds");
+        cpts.add("Request MiddleWare Queue Time Seconds");
+        cpts.add("Request Application Service Time Seconds");
+        cpts.add("Request Application Queue Time Seconds");
+        cpts.add("Request Database Service Time Seconds");
+        cpts.add("Request Database Queue Time Seconds");
+        cpts.add("Response Application Service Time Seconds");
+        cpts.add("Response Application Queue Time Seconds");
+        cpts.add("Response MiddleWare Service Time Seconds");
+        cpts.add("Response Web Service Time Seconds");
+        cpts.add("Response Web Queue Time Seconds");
+        cpts.add("Response Load Balance Service Time Seconds");
+        cpts.add("Response Load Balance Queue Time Seconds");
 
-        // Convert the JSON to a JSONObject.
-        /*
-        Notice that we are converting the JSON to a JSONObject, not a JSONArray. We are doing this because, as mentioned
-        earlier, the outermost element of the JSON in the file is an object.
-         */
-        JSONObject jsonObject;
+        int[] fieldWidths = {20, // Simulation Name
+                10, // Simulation Type
+                10, // Number of Users
+                10, // WAN Roundtrip MS
+                10, // Request Message Bytes
+                10, // Response Message Bytes
+                10, // Think Seconds
+                10, // Request WAN Service Time Seconds
+                10, // Request WAN Queue Time Seconds
+                10, // Request Load Balance Service Time Seconds
+                10, // Request Load Balance Queue Time Seconds
+                10, // Request Web Service Time Seconds
+                10, // Request Web Queue Time Seconds
+                10, // Request MiddleWare Service Time Seconds
+                10, // Request MiddleWare Queue Time Seconds
+                10, // Request Application Service Time Seconds
+                10, // Request Application Queue Time Seconds
+                10, // Request Database Service Time Seconds
+                10, // Request Database Queue Time Seconds
+                10, // Response Application Service Time Seconds
+                10, // Response Application Queue Time Seconds
+                10, // Response MiddleWare Service Time Seconds
+                10, // Response MiddleWare Queue Time Seconds
+                10, // Response Web Service Time Seconds
+                10, // Response Web Queue Time Seconds
+                10, // Response Load Balance Service Time Seconds
+                10 // Response Load Balance Queue Time Second
+        };
+
+        new SimGUI(cpts, fieldWidths, cmpts);
+    }
+
+    public static Simulationrun readXML(File inFile) {
         try {
-            jsonObject = new JSONObject(json);
-        } catch (Exception e) {
-            System.err.println("Failed to convert the JSON to a JSONObject.");
+
+            // create new jaxb context
+            JAXBContext jaxbContext = JAXBContext.newInstance(Simulationrun.class);
+
+            // create new Unmarshaller  to convert xml to java object
+            Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
+
+            // create configuration object from unmarshaller
+            Simulationrun readConfiguration = (Simulationrun) jaxbUnmarshaller.unmarshal(inFile);
+
+            return readConfiguration;
+
+        } catch (JAXBException e) { // catch if input
             e.printStackTrace();
-            jsonObject = new JSONObject();
         }
-
-        // Get the nested array in the JSONObject.
-        /*
-        At this point, we have a JSONObject that we parsed from the JSON. The data that we really need is in the array
-        that is nested in this object. Looking at the JSON in the file, we can see that the array is the value to the
-        key "components". To fetch this array, we need to get the array in the object with the key "components".
-         */
-        JSONArray jsonArray;
-        try {
-            jsonArray = jsonObject.getJSONArray("components");
-        } catch (Exception e) {
-            System.err.println("Failed to get the JSONArray with key \"components\" from the JSONObject");
-            e.printStackTrace();
-            jsonArray = new JSONArray();
-        }
-
-        // Convert each "component" in the JSONArray to a Component object and put them in our people list.
-        /*
-        We now have our JSONArray that contains two objects, each with a component's information. We want to create new
-        Component objects out of each of these sets of information. To do that, we will iterate through the JSONArray and
-        use gson to magically convert the raw data to an object.
-         */
-        Gson gson = new Gson();
-        for (int i = 0; i < jsonArray.length(); i++) {
-            simgui.Component component;
-
-            // Convert each JSONObject in the JSONArray to a string as this is what gson acts on.
-            /*
-            Step by step, gson is going to be creating an object fromJson(). The JSON it will be converting from is
-            inside the object at the current index (i). Gson acts upon Strings, not JSONObjects. Because of this, we
-            need to convert the JSONObject to a string using its toString() method. The second parameter that
-            gson.fromJson takes is the Class the object we are creating is derived from.
-             */
-            try {
-                component = gson.fromJson(jsonArray.getJSONObject(i).toString(), simgui.Component.class);
-            } catch (Exception e) {
-                System.err.println("Failed to convert the JSON at index " + i + " to a Component.");
-                e.printStackTrace();
-                component = new simgui.Component();
-            }
-
-            // Add the newly created components to our component list.
-            components.add(component);
-        }
-
-        // Print the data for each component in our Component list.
-        for (int i = 0; i < components.size(); i++) {
-            //System.out.println(components.get(i));
-        }
-
-
-        int[] fieldWidths = new int[components.size()];
-        for (int i = 0; i < components.size(); i++) {
-            fieldWidths[i] = 20;
-        }
-
-        new SimGUI(components, fieldWidths);
+        return null;
     }
 
     /**
@@ -339,7 +471,7 @@ public class SimGUI extends JFrame {
     private static String readFile(String strFile) {
         try {
             JFileChooser openFileChooser = new JFileChooser();
-            FileNameExtensionFilter mfstFilter = new FileNameExtensionFilter("mfst files (*.mfst)", "mfst"); // filter to only show manifest files
+            FileNameExtensionFilter mfstFilter = new FileNameExtensionFilter("manf files (*.manf)", "manf"); // filter to only show manifest files
             openFileChooser.setFileFilter(mfstFilter);
             int returnValue = openFileChooser.showOpenDialog(null);
 
@@ -356,18 +488,54 @@ public class SimGUI extends JFrame {
         }
     }
 
-
-    /*
-     * Name: populateTextFiledUponFileOpen
-     * Input: Simulationrun
-     * Output: void
-     * Function: When the user opens an XML file, after the Simulationrun object is created, the text fields are then populated with the values from the XML file.
-     */
     public void populateTextFieldsUponFileOpen(Simulationrun currentConfiguration) {
 
+        fields[0].setText(currentConfiguration.getruntitle());
+
+        fields[1].setText(currentConfiguration.getsimtype());
+
+        fields[2].setText(currentConfiguration.getnumusers());
+
+        fields[3].setText(currentConfiguration.getwanroundtripms());
+
+        fields[4].setText(currentConfiguration.getrequestmsgbytes());
+
+        fields[5].setText(currentConfiguration.getresponsemsgbytes());
+
+        fields[6].setText(currentConfiguration.getthinksecs());
+
+        fields[7].setText(currentConfiguration.getreqwansecs());
+        fields[8].setText(currentConfiguration.getreqwanquesecs());
+
+        fields[9].setText(currentConfiguration.getreqlbsecs());
+        fields[10].setText(currentConfiguration.getreqlbquesecs());
+
+        fields[11].setText(currentConfiguration.getreqwebsecs());
+        fields[12].setText(currentConfiguration.getreqwebquesecs());
+
+        fields[13].setText(currentConfiguration.getreqmidsecs());
+        fields[14].setText(currentConfiguration.getreqmidquesecs());
+
+        fields[15].setText(currentConfiguration.getreqappsecs());
+        fields[16].setText(currentConfiguration.getreqappquesecs());
+
+        fields[17].setText(currentConfiguration.getreqdbsecs());
+        fields[18].setText(currentConfiguration.getreqdbquesecs());
+
+        fields[19].setText(currentConfiguration.getrspappsecs());
+        fields[20].setText(currentConfiguration.getrspappquesecs());
+
+        fields[21].setText(currentConfiguration.getrspmidsecs());
+        fields[22].setText(currentConfiguration.getrspmidquesecs());
+
+        fields[23].setText(currentConfiguration.getrspwebsecs());
+        fields[24].setText(currentConfiguration.getrspwebquesecs());
+
+        fields[25].setText(currentConfiguration.getrsplbsecs());
+        fields[26].setText(currentConfiguration.getrsplbquesecs());
     }
 
-    public int saveXML(File saveFile) {
+    public int saveXML(File tempFile) {
         int flag = createConfiguration();
         return flag;
     }
@@ -380,10 +548,8 @@ public class SimGUI extends JFrame {
 
             for (int i = 0; i < values.length; i++) {
                 values[i] = fields[i].getText();
-                //System.out.println(values[i]);
             }
 
-            //currentConfiguration = new Simulationrun(values);
         } else {
             flag = 1;
             switch (result) {
@@ -437,7 +603,7 @@ public class SimGUI extends JFrame {
      * 0: Success
      * -1: There is an empty field
      * 101: Simulation type is not "infinite" or "finite"
-     * 
+     *
      * * X denotes a position 02 through 26
      * 1XX: Entered value is not a number
      * 2XX: Value is negative
@@ -489,7 +655,7 @@ public class SimGUI extends JFrame {
                 System.out.println("negative on this line");
                 return error;
             }
-            if ((i % 2) != 0) { // if i is odd 
+            if ((i % 2) != 0) { // if i is odd
                 if ((temp < 0.0001) || (temp > 10)) { //  service time is not between 0.0001 and 10 inclusive
                     error = 300 + i;
                     System.out.println("odd or service time is not between 0.0001 and 10 inclusive ");
