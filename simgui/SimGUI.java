@@ -518,6 +518,9 @@ public class SimGUI extends JFrame {
                 case 206:
                     JOptionPane.showMessageDialog(null, "Think seconds must be a positive number", "Error " + result, JOptionPane.WARNING_MESSAGE);
                     break;
+                case 999:
+                    JOptionPane.showMessageDialog(null, "Service and Queue Response Times must be a positive number", "Error " + result, JOptionPane.WARNING_MESSAGE);
+                    break;
                 default:
                     JOptionPane.showMessageDialog(null, "Error in text fields", "Error " + result, JOptionPane.WARNING_MESSAGE);
                     break;
@@ -590,6 +593,23 @@ public class SimGUI extends JFrame {
                     System.out.println("odd or service time is not between 0.0001 and 10 inclusive ");
                     return error;
                 }
+            }
+        }
+
+        for(int i = 7; i<fields.size(); i++)
+        {
+            int temp = 0;
+            try {
+                temp = Integer.parseInt(fields.get(i).getText());
+            } catch (Exception e) { // not a number
+                error = 999;
+                System.out.println("not a number");
+                return error;
+            }
+            if (temp < 0) {
+                error = 999; // negative value
+                System.out.println("negative value");
+                return error;
             }
         }
         return error;
