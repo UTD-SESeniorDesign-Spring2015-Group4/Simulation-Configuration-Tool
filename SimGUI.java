@@ -45,6 +45,7 @@ public class SimGUI extends JFrame {
     double widthPercent = 0.33;
     double heightPercent = 0.75;
     Simulationrun currentConfig;
+    Object mouseClick;
 
     //Make simgui.Component Class
     //Use an array list to read all of the component names, and values (maybe types too)
@@ -104,17 +105,70 @@ public class SimGUI extends JFrame {
          * Creating the text fields, setting their width, creating their label, adding label to the label panel, adding text field to text field panel.
          */
 
+        /* Cameron this is the part that I added in, but it is not working right.
+            My logic is that if the manf button is clicked it will display
+            the request and response labels then the component name.
+            This is what I understood from both your example and Jon's example.
+            So basically it should display Request WAN Service Time Seconds (Cameron)
+                                            Request WAN Queue Time Seconds (Cameron)
+                                            so and and so forth.
+            I did this because it Jon sent me this
+            "Request WAN Service Time Seconds (<insert component name here>)"
+            So that is what I understood.
+            He also said this "It didn't look like each component had the two required fields either, have you fixed that?"
+            But I didn't get a chance to clarify, so no I dont think I have this done.
+            I'm going to ask Jon if he wanted the request and response stuff listed out like the original java program
+            but each component name will be displayed next to one.
+            Because that's going to be a shit load of lines.
+            It's 6am and I'm exhausted, so I'm really not making any progress.
+         */
+        ArrayList<String> timeSec = new ArrayList<>();
+
+        timeSec.add("Request WAN Service Time Seconds");
+        timeSec.add("Request WAN Queue Time Seconds");
+        timeSec.add("Request Load Balance Service Time Seconds");
+        timeSec.add("Request Load Balance Queue Time Seconds");
+        timeSec.add("Request Web Service Time Seconds");
+        timeSec.add("Request Web Queue Time Seconds");
+        timeSec.add("Request MiddleWare Service Time Seconds");
+        timeSec.add("Request MiddleWare Queue Time Seconds");
+        timeSec.add("Request Application Service Time Seconds");
+        timeSec.add("Request Application Queue Time Seconds");
+        timeSec.add("Request Database Service Time Seconds");
+        timeSec.add("Request Database Queue Time Seconds");
+        timeSec.add("Response Application Service Time Seconds");
+        timeSec.add("Response Application Queue Time Seconds");
+        timeSec.add("Response MiddleWare Service Time Seconds");
+        timeSec.add("Response Web Service Time Seconds");
+        timeSec.add("Response Web Queue Time Seconds");
+        timeSec.add("Response Load Balance Service Time Seconds");
+        timeSec.add("Response Load Balance Queue Time Seconds");
+
         for (int i = 0; i < components.size(); i++) {
             fields[i] = new JTextField();
             fields[i].setColumns(components.size());
-            JLabel lab = new JLabel(components.get(i).toString(), JLabel.LEFT);
-            lab.setLabelFor(fields[i]);
+            // checks what the source of the mouse click was, i dont think this is working at all
+            if(mouseClick == manfBtn){
+                // This format should work they way I think it will.
+                for(int j = 0; j < timeSec.size(); j++){
+                    JLabel lab = new JLabel(timeSec.get(j) + " (" + components.get(i).toString() + ")", JLabel.LEFT);
+                    lab.setLabelFor(fields[i]);
+                    labelPanel.add(lab);
 
-            labelPanel.add(lab);
+                    JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                    p.add(fields[i]);
+                    fieldPanel.add(p);
+                }
+            }
+            else {
+                JLabel lab = new JLabel(components.get(i).toString(), JLabel.LEFT);
+                lab.setLabelFor(fields[i]);
+                labelPanel.add(lab);
 
-            JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
-            p.add(fields[i]);
-            fieldPanel.add(p);
+                JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                p.add(fields[i]);
+                fieldPanel.add(p);
+            }
         }
 
         for (int i = 0; i < cmpts.size(); i++) {
@@ -136,6 +190,7 @@ public class SimGUI extends JFrame {
         // Action listener for the manf button
         ActionListener manfBtnListener = new ActionListener(){
             public void actionPerformed(ActionEvent actionEvent) {
+                mouseClick = actionEvent.getSource();
                 List<simgui.Component> components = new ArrayList<>();
                 setVisible(false);
                 String json = readFile("");
