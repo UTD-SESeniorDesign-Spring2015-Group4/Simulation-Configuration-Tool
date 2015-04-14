@@ -39,6 +39,14 @@ public class Component {
         this.connections = connections;
     }
 
+    public String getServiceFieldLabel() {
+        return String.format("Request %s Service Time Seconds (%s)", type, name);
+    }
+
+    public String getQueueFieldLabel() {
+        return String.format("Request %s Queue Time Seconds (%s)", type, name);
+    }
+
     @Override
     public String toString() {
         return name;
