@@ -10,6 +10,7 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -24,9 +25,8 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Scanner;
 
 // These require java-json (http://www.json.org/java/).
 // This requires json (https://code.google.com/p/google-gson/).
@@ -34,7 +34,7 @@ import java.util.Scanner;
 public class SimGUI extends JFrame {
 
     final String SIMULATION_FILE_NAME = "SimCmdv10.py";
-    JTextField[] fields;
+    ArrayList<JTextField> fields;
     static File openFile;
     File saveFile;
     File outputFile;
@@ -46,6 +46,7 @@ public class SimGUI extends JFrame {
     double heightPercent = 0.75;
     Simulationrun currentConfig;
     Object mouseClick;
+    Map<JTextField, Component> requestServiceFieldMap, requestQueueFieldMap, responseServiceFieldMap, responseQueueFieldMap;
 
     //Make simgui.Component Class
     //Use an array list to read all of the component names, and values (maybe types too)
@@ -61,18 +62,15 @@ public class SimGUI extends JFrame {
     This structure will be quite important to understand when we start parsing it out.
      */
 
-    public SimGUI(List components, int[] fieldWidths, List cmpts) {
+    public SimGUI(List<Component> components) {
         super("Simulation Configuration"); // title of window
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         JScrollPane mainScrollPane;
         JScrollPane bottomScrollPane;
-        mainPanel = new JPanel(new GridLayout()); // panel to hold text fields and their labels
-        JPanel labelPanel = new JPanel(new GridLayout(components.size(), 1)); // panel to hold text field labels
-        JPanel fieldPanel = new JPanel(new GridLayout(components.size(), 1)); // panel to hold text fields
-
-        JPanel defaultLabel = new JPanel(new GridLayout(cmpts.size(), 1));
-        JPanel defaultField = new JPanel(new GridLayout(cmpts.size(), 1));
+        mainPanel = new JPanel(new GridLayout(0, 2)); // panel to hold text fields and their labels
+        JPanel labelPanel = new JPanel(new GridLayout(0, 1)); // panel to hold text field labels
+        JPanel fieldPanel = new JPanel(new GridLayout(0, 1)); // panel to hold text fields
 
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT)); // panel to hold buttons
         bottomPanel = new JPanel(new BorderLayout()); // panel to hold simulation results
@@ -87,19 +85,17 @@ public class SimGUI extends JFrame {
         simulationOutput = new JTextArea(15, 25); // text area to hold simulation results
         JLabel outputLabel = new JLabel("Simulation Output: ", JLabel.LEFT); // label for simulation results
 
-        if(!cmpts.isEmpty()){
-            mainPanel = new JPanel(new GridLayout(2, 1));
-            mainPanel.add(defaultLabel, BorderLayout.WEST);
-            mainPanel.add(defaultField, BorderLayout.CENTER);
-        }
-
         mainPanel.add(labelPanel, BorderLayout.WEST);
         mainPanel.add(fieldPanel, BorderLayout.CENTER);
 
         getContentPane().add(topPanel, BorderLayout.NORTH);
         getContentPane().add(bottomPanel, BorderLayout.SOUTH);
 
-        fields = new JTextField[fieldWidths.length];
+        fields = new ArrayList<JTextField>();
+        requestServiceFieldMap = new HashMap<JTextField, Component>();
+        requestQueueFieldMap = new HashMap<JTextField, Component>();
+        responseServiceFieldMap = new HashMap<JTextField, Component>();
+        responseQueueFieldMap = new HashMap<JTextField, Component>();
 
         /*
          * Creating the text fields, setting their width, creating their label, adding label to the label panel, adding text field to text field panel.
@@ -122,66 +118,110 @@ public class SimGUI extends JFrame {
             Because that's going to be a shit load of lines.
             It's 6am and I'm exhausted, so I'm really not making any progress.
          */
-        ArrayList<String> timeSec = new ArrayList<>();
 
-        timeSec.add("Request WAN Service Time Seconds");
-        timeSec.add("Request WAN Queue Time Seconds");
-        timeSec.add("Request Load Balance Service Time Seconds");
-        timeSec.add("Request Load Balance Queue Time Seconds");
-        timeSec.add("Request Web Service Time Seconds");
-        timeSec.add("Request Web Queue Time Seconds");
-        timeSec.add("Request MiddleWare Service Time Seconds");
-        timeSec.add("Request MiddleWare Queue Time Seconds");
-        timeSec.add("Request Application Service Time Seconds");
-        timeSec.add("Request Application Queue Time Seconds");
-        timeSec.add("Request Database Service Time Seconds");
-        timeSec.add("Request Database Queue Time Seconds");
-        timeSec.add("Response Application Service Time Seconds");
-        timeSec.add("Response Application Queue Time Seconds");
-        timeSec.add("Response MiddleWare Service Time Seconds");
-        timeSec.add("Response Web Service Time Seconds");
-        timeSec.add("Response Web Queue Time Seconds");
-        timeSec.add("Response Load Balance Service Time Seconds");
-        timeSec.add("Response Load Balance Queue Time Seconds");
+        ArrayList<String> defaultLabels = new ArrayList<>();
 
-        for (int i = 0; i < components.size(); i++) {
-            fields[i] = new JTextField();
-            fields[i].setColumns(components.size());
-            // checks what the source of the mouse click was, i dont think this is working at all
-            if(mouseClick == manfBtn){
-                // This format should work they way I think it will.
-                for(int j = 0; j < timeSec.size(); j++){
-                    JLabel lab = new JLabel(timeSec.get(j) + " (" + components.get(i).toString() + ")", JLabel.LEFT);
-                    lab.setLabelFor(fields[i]);
-                    labelPanel.add(lab);
+        defaultLabels.add("Simulation Name");
+        defaultLabels.add("Simulation Type");
+        defaultLabels.add("Number of Users");
+        defaultLabels.add("WAN Roundtrip MS");
+        defaultLabels.add("Request Message Bytes");
+        defaultLabels.add("Response Message Bytes");
+        defaultLabels.add("Think Seconds");
 
-                    JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
-                    p.add(fields[i]);
-                    fieldPanel.add(p);
-                }
-            }
-            else {
-                JLabel lab = new JLabel(components.get(i).toString(), JLabel.LEFT);
-                lab.setLabelFor(fields[i]);
-                labelPanel.add(lab);
+        if(components == null) {
+            defaultLabels.add("Request WAN Service Time Seconds");
+            defaultLabels.add("Request WAN Queue Time Seconds");
+            defaultLabels.add("Request Load Balance Service Time Seconds");
+            defaultLabels.add("Request Load Balance Queue Time Seconds");
+            defaultLabels.add("Request Web Service Time Seconds");
+            defaultLabels.add("Request Web Queue Time Seconds");
+            defaultLabels.add("Request MiddleWare Service Time Seconds");
+            defaultLabels.add("Request MiddleWare Queue Time Seconds");
+            defaultLabels.add("Request Application Service Time Seconds");
+            defaultLabels.add("Request Application Queue Time Seconds");
+            defaultLabels.add("Request Database Service Time Seconds");
+            defaultLabels.add("Request Database Queue Time Seconds");
+            defaultLabels.add("Response Application Service Time Seconds");
+            defaultLabels.add("Response Application Queue Time Seconds");
+            defaultLabels.add("Response MiddleWare Service Time Seconds");
+            defaultLabels.add("Response MiddleWare Queue Time Seconds");
+            defaultLabels.add("Response Web Service Time Seconds");
+            defaultLabels.add("Response Web Queue Time Seconds");
+            defaultLabels.add("Response Load Balance Service Time Seconds");
+            defaultLabels.add("Response Load Balance Queue Time Seconds");
 
-                JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
-                p.add(fields[i]);
-                fieldPanel.add(p);
-            }
+
         }
 
-        for (int i = 0; i < cmpts.size(); i++) {
-            fields[i] = new JTextField();
-            fields[i].setColumns(cmpts.size());
-            JLabel lab = new JLabel(cmpts.get(i).toString(), JLabel.LEFT);
-            lab.setLabelFor(fields[i]);
-            defaultLabel.add(lab);
+        for(int i = 0; i < defaultLabels.size(); i++){
+            JLabel lab = new JLabel(defaultLabels.get(i), JLabel.LEFT);
+            labelPanel.add(lab);
 
             JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
-            p.add(fields[i]);
-            defaultField.add(p);
+            JTextField field = new JTextField();
+            field.setColumns(20);
+            fields.add(field);
+            p.add(field);
+            fieldPanel.add(p);
         }
+        if(components != null) {
+            for (int i = 0; i < components.size(); i++) {
+                Component component = components.get(i);
+                String type = component.getType();
+                // Create Request Service time field
+                JLabel labService = new JLabel(component.getRequestServiceFieldLabel(), JLabel.LEFT);
+                labelPanel.add(labService);
+
+                JPanel pService = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                JTextField fieldService = new JTextField();
+                fieldService.setColumns(20);
+                fields.add(fieldService);
+                requestServiceFieldMap.put(fieldService, component);
+                pService.add(fieldService);
+                fieldPanel.add(pService);
+
+                // Create Request Queue time field
+                JLabel labQueue = new JLabel(component.getRequestQueueFieldLabel(), JLabel.LEFT);
+                labelPanel.add(labQueue);
+
+                JPanel pQueue = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                JTextField fieldQueue = new JTextField();
+                fieldQueue.setColumns(20);
+                fields.add(fieldQueue);
+                requestQueueFieldMap.put(fieldQueue, component);
+                pQueue.add(fieldQueue);
+                fieldPanel.add(pQueue);
+
+                if(type.equals("ApplicationServer") || type.equals("MiddlewareServer") || type.equals("WebfrontendServer") || type.equals("Loadbalancer")) {
+                    // Create Response Service time field
+                    JLabel labRspService = new JLabel(component.getResponseServiceFieldLabel(), JLabel.LEFT);
+                    labelPanel.add(labRspService);
+
+                    JPanel pRspService = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                    JTextField fieldRspService = new JTextField();
+                    fieldRspService.setColumns(20);
+                    fields.add(fieldRspService);
+                    responseServiceFieldMap.put(fieldRspService, component);
+                    pRspService.add(fieldRspService);
+                    fieldPanel.add(pRspService);
+
+                    // Create Response Queue time field
+                    JLabel labRspQueue = new JLabel(component.getResponseQueueFieldLabel(), JLabel.LEFT);
+                    labelPanel.add(labRspQueue);
+
+                    JPanel pRspQueue = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                    JTextField fieldRspQueue = new JTextField();
+                    fieldRspQueue.setColumns(20);
+                    fields.add(fieldRspQueue);
+                    responseQueueFieldMap.put(fieldRspQueue, component);
+                    pRspQueue.add(fieldRspQueue);
+                    fieldPanel.add(pRspQueue);
+                }
+            }
+        }
+
+
 
         mainScrollPane = new JScrollPane(mainPanel); // scroll pane to hold text fields and their labels.
         mainScrollPane.getVerticalScrollBar().setUnitIncrement(16); // increase scroll speed
@@ -230,22 +270,7 @@ public class SimGUI extends JFrame {
 
                 }
 
-                ArrayList<String> cmpts = new ArrayList<>();
-
-                cmpts.add("Simulation Name");
-                cmpts.add("Simulation Type");
-                cmpts.add("Number of Users");
-                cmpts.add("WAN Roundtrip MS");
-                cmpts.add("Request Message Bytes");
-                cmpts.add("Response Message Bytes");
-                cmpts.add("Think Seconds");
-
-                int[] fieldWidths = new int[components.size()+cmpts.size()];
-                for (int i = 0; i < components.size(); i++) {
-                    fieldWidths[i] = 20;
-                }
-
-                new SimGUI(components, fieldWidths, cmpts);
+                new SimGUI(components);
             }
         };
 
@@ -269,6 +294,7 @@ public class SimGUI extends JFrame {
             }
         };
 
+        // TODO: put this back the way it was using saveXML
         //action listener for save button.
         ActionListener saveBtnListener = new ActionListener() {
             public void actionPerformed(ActionEvent actionEvent) {
@@ -296,7 +322,7 @@ public class SimGUI extends JFrame {
                             // component elements
 
                             Element component = doc.createElement(components.get(i).toString().replaceAll("\\s",""));
-                            component.appendChild(doc.createTextNode(fields[i].getText()));
+                            component.appendChild(doc.createTextNode(fields.get(i).getText()));
                             rootElement.appendChild(component);
                         }
 
@@ -379,67 +405,7 @@ public class SimGUI extends JFrame {
     }
 
     public static void main(String args[]) {
-
-        ArrayList<String> cpts = new ArrayList<>();
-        ArrayList<String> cmpts = new ArrayList<>();
-
-        cpts.add("Simulation Name");
-        cpts.add("Simulation Type");
-        cpts.add("Number of Users");
-        cpts.add("WAN Roundtrip MS");
-        cpts.add("Request Message Bytes");
-        cpts.add("Response Message Bytes");
-        cpts.add("Think Seconds");
-        cpts.add("Request WAN Service Time Seconds");
-        cpts.add("Request WAN Queue Time Seconds");
-        cpts.add("Request Load Balance Service Time Seconds");
-        cpts.add("Request Load Balance Queue Time Seconds");
-        cpts.add("Request Web Service Time Seconds");
-        cpts.add("Request Web Queue Time Seconds");
-        cpts.add("Request MiddleWare Service Time Seconds");
-        cpts.add("Request MiddleWare Queue Time Seconds");
-        cpts.add("Request Application Service Time Seconds");
-        cpts.add("Request Application Queue Time Seconds");
-        cpts.add("Request Database Service Time Seconds");
-        cpts.add("Request Database Queue Time Seconds");
-        cpts.add("Response Application Service Time Seconds");
-        cpts.add("Response Application Queue Time Seconds");
-        cpts.add("Response MiddleWare Service Time Seconds");
-        cpts.add("Response Web Service Time Seconds");
-        cpts.add("Response Web Queue Time Seconds");
-        cpts.add("Response Load Balance Service Time Seconds");
-        cpts.add("Response Load Balance Queue Time Seconds");
-
-        int[] fieldWidths = {20, // Simulation Name
-                10, // Simulation Type
-                10, // Number of Users
-                10, // WAN Roundtrip MS
-                10, // Request Message Bytes
-                10, // Response Message Bytes
-                10, // Think Seconds
-                10, // Request WAN Service Time Seconds
-                10, // Request WAN Queue Time Seconds
-                10, // Request Load Balance Service Time Seconds
-                10, // Request Load Balance Queue Time Seconds
-                10, // Request Web Service Time Seconds
-                10, // Request Web Queue Time Seconds
-                10, // Request MiddleWare Service Time Seconds
-                10, // Request MiddleWare Queue Time Seconds
-                10, // Request Application Service Time Seconds
-                10, // Request Application Queue Time Seconds
-                10, // Request Database Service Time Seconds
-                10, // Request Database Queue Time Seconds
-                10, // Response Application Service Time Seconds
-                10, // Response Application Queue Time Seconds
-                10, // Response MiddleWare Service Time Seconds
-                10, // Response MiddleWare Queue Time Seconds
-                10, // Response Web Service Time Seconds
-                10, // Response Web Queue Time Seconds
-                10, // Response Load Balance Service Time Seconds
-                10 // Response Load Balance Queue Time Second
-        };
-
-        new SimGUI(cpts, fieldWidths, cmpts);
+        new SimGUI(null);
     }
 
     public static Simulationrun readXML(File inFile) {
@@ -488,68 +454,88 @@ public class SimGUI extends JFrame {
         }
     }
 
+    // TODO: Make this work with our dynamic fields
     public void populateTextFieldsUponFileOpen(Simulationrun currentConfiguration) {
 
-        fields[0].setText(currentConfiguration.getruntitle());
+        fields.get(0).setText(currentConfiguration.getruntitle());
 
-        fields[1].setText(currentConfiguration.getsimtype());
+        fields.get(1).setText(currentConfiguration.getsimtype());
 
-        fields[2].setText(currentConfiguration.getnumusers());
+        fields.get(2).setText(currentConfiguration.getnumusers());
 
-        fields[3].setText(currentConfiguration.getwanroundtripms());
+        fields.get(3).setText(currentConfiguration.getwanroundtripms());
 
-        fields[4].setText(currentConfiguration.getrequestmsgbytes());
+        fields.get(4).setText(currentConfiguration.getrequestmsgbytes());
 
-        fields[5].setText(currentConfiguration.getresponsemsgbytes());
+        fields.get(5).setText(currentConfiguration.getresponsemsgbytes());
 
-        fields[6].setText(currentConfiguration.getthinksecs());
+        fields.get(6).setText(currentConfiguration.getthinksecs());
 
-        fields[7].setText(currentConfiguration.getreqwansecs());
-        fields[8].setText(currentConfiguration.getreqwanquesecs());
+        fields.get(7).setText(currentConfiguration.getreqwansecs());
+        fields.get(8).setText(currentConfiguration.getreqwanquesecs());
 
-        fields[9].setText(currentConfiguration.getreqlbsecs());
-        fields[10].setText(currentConfiguration.getreqlbquesecs());
+        fields.get(9).setText(currentConfiguration.getreqlbsecs());
+        fields.get(10).setText(currentConfiguration.getreqlbquesecs());
 
-        fields[11].setText(currentConfiguration.getreqwebsecs());
-        fields[12].setText(currentConfiguration.getreqwebquesecs());
+        fields.get(11).setText(currentConfiguration.getreqwebsecs());
+        fields.get(12).setText(currentConfiguration.getreqwebquesecs());
 
-        fields[13].setText(currentConfiguration.getreqmidsecs());
-        fields[14].setText(currentConfiguration.getreqmidquesecs());
+        fields.get(13).setText(currentConfiguration.getreqmidsecs());
+        fields.get(14).setText(currentConfiguration.getreqmidquesecs());
 
-        fields[15].setText(currentConfiguration.getreqappsecs());
-        fields[16].setText(currentConfiguration.getreqappquesecs());
+        fields.get(15).setText(currentConfiguration.getreqappsecs());
+        fields.get(16).setText(currentConfiguration.getreqappquesecs());
 
-        fields[17].setText(currentConfiguration.getreqdbsecs());
-        fields[18].setText(currentConfiguration.getreqdbquesecs());
+        fields.get(17).setText(currentConfiguration.getreqdbsecs());
+        fields.get(18).setText(currentConfiguration.getreqdbquesecs());
 
-        fields[19].setText(currentConfiguration.getrspappsecs());
-        fields[20].setText(currentConfiguration.getrspappquesecs());
+        fields.get(19).setText(currentConfiguration.getrspappsecs());
+        fields.get(20).setText(currentConfiguration.getrspappquesecs());
 
-        fields[21].setText(currentConfiguration.getrspmidsecs());
-        fields[22].setText(currentConfiguration.getrspmidquesecs());
+        fields.get(21).setText(currentConfiguration.getrspmidsecs());
+        fields.get(22).setText(currentConfiguration.getrspmidquesecs());
 
-        fields[23].setText(currentConfiguration.getrspwebsecs());
-        fields[24].setText(currentConfiguration.getrspwebquesecs());
+        fields.get(23).setText(currentConfiguration.getrspwebsecs());
+        fields.get(24).setText(currentConfiguration.getrspwebquesecs());
 
-        fields[25].setText(currentConfiguration.getrsplbsecs());
-        fields[26].setText(currentConfiguration.getrsplbquesecs());
+        fields.get(25).setText(currentConfiguration.getrsplbsecs());
+        fields.get(26).setText(currentConfiguration.getrsplbquesecs());
     }
 
-    public int saveXML(File tempFile) {
+    public int saveXML(File saveFile) {
         int flag = createConfiguration();
+        try {
+            if (flag == 0) {
+                // create new jaxb context
+                JAXBContext jaxbContext = JAXBContext.newInstance(Simulationrun.class);
+
+                // create new marshaller to convert java object into a xml file
+                Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+
+                // formatted output
+                jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+
+                jaxbMarshaller.marshal(currentConfig, saveFile);
+            }
+
+        } catch (JAXBException e) {
+            e.printStackTrace();
+        }
         return flag;
     }
+
 
     public int createConfiguration() {
         int flag = 0;
         int result = validateFields();
         if (result == 0) { // valid configuration
-            String[] values = new String[fields.length];
+            String[] values = new String[fields.size()];
 
             for (int i = 0; i < values.length; i++) {
-                values[i] = fields[i].getText();
+                values[i] = fields.get(i).getText();
             }
 
+            currentConfig = new Simulationrun(fields, requestServiceFieldMap, requestQueueFieldMap, responseServiceFieldMap, responseQueueFieldMap);
         } else {
             flag = 1;
             switch (result) {
@@ -589,6 +575,9 @@ public class SimGUI extends JFrame {
                 case 206:
                     JOptionPane.showMessageDialog(null, "Think seconds must be a positive number", "Error " + result, JOptionPane.WARNING_MESSAGE);
                     break;
+                case 999:
+                    JOptionPane.showMessageDialog(null, "Service and Queue Response Times must be a positive number", "Error " + result, JOptionPane.WARNING_MESSAGE);
+                    break;
                 default:
                     JOptionPane.showMessageDialog(null, "Error in text fields", "Error " + result, JOptionPane.WARNING_MESSAGE);
                     break;
@@ -611,15 +600,15 @@ public class SimGUI extends JFrame {
      */
     public int validateFields() {
         int error = 0;
-        for (int i = 0; i < fields.length; i++) {
-            if (fields[i].getText().equals("")) { // empty field
+        for (int i = 0; i < fields.size(); i++) {
+            if (fields.get(i).getText().equals("")) { // empty field
                 error = -1;
                 System.out.println("empty field");
                 return error;
             }
         }
 
-        if (!fields[1].getText().equals("infinite") && !fields[1].getText().equals("finite")) { // simulation type is not infinite or finite
+        if (!fields.get(1).getText().equals("infinite") && !fields.get(1).getText().equals("finite")) { // simulation type is not infinite or finite
             error = 101;
             System.out.println("Simulation Type not finite or infinite");
             return error;
@@ -628,7 +617,7 @@ public class SimGUI extends JFrame {
         for (int i = 2; i <= 5; i++) {
             int temp = 0;
             try {
-                temp = Integer.parseInt(fields[i].getText());
+                temp = Integer.parseInt(fields.get(i).getText());
             } catch (Exception e) { // not a number
                 error = 100 + i;
                 System.out.println("not a number");
@@ -644,7 +633,7 @@ public class SimGUI extends JFrame {
         for (int i = 5; i <= 6; i++) {
             double temp = 0;
             try {
-                temp = Double.parseDouble(fields[i].getText());
+                temp = Double.parseDouble(fields.get(i).getText());
             } catch (Exception e) { // not a number
                 error = 100 + i;
                 System.out.println("trouble in fields [5] and [6]");
@@ -663,20 +652,34 @@ public class SimGUI extends JFrame {
                 }
             }
         }
+
+        for(int i = 7; i<fields.size(); i++)
+        {
+            int temp = 0;
+            try {
+                temp = Integer.parseInt(fields.get(i).getText());
+            } catch (Exception e) { // not a number
+                error = 999;
+                System.out.println("not a number");
+                return error;
+            }
+            if (temp < 0) {
+                error = 999; // negative value
+                System.out.println("negative value");
+                return error;
+            }
+        }
         return error;
     }
 
     //Simulation Output
     public void startSimulation() {
         String jarDir = "";
-        String tempDir = System.getProperty("java.io.tmpdir");
-        File tempFile = null;
+        File tempFile = new File(System.getProperty("java.io.tmpdir"), "temp");
 
         String results = "";
         String errors = "";
         int flag;
-
-        tempFile = new File(tempDir + "\\temp");
 
         flag = saveXML(tempFile);
         if (flag == 0) { // no errors during save - ie all entries are valid

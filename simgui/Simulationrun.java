@@ -1,7 +1,10 @@
 package simgui;
 
+import javax.swing.*;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.List;
+import java.util.Map;
 
 @XmlRootElement
 public class Simulationrun {
@@ -149,6 +152,103 @@ public class Simulationrun {
         setrspwebquesecs(values[24]);
         setrsplbsecs(values[25]);
         setrsplbquesecs(values[26]);
+    }
+
+    public Simulationrun(List<JTextField> fields,
+                         Map<JTextField, Component> requestServiceFieldMap,
+                         Map<JTextField, Component> requestQueueFieldMap,
+                         Map<JTextField, Component> responseServiceFieldMap,
+                         Map<JTextField, Component> responseQueueFieldMap) {
+        setruntitle(fields.get(0).getText());
+        setsimtype(fields.get(1).getText());
+        setnumusers(fields.get(1).getText());
+        setwanroundtripms(fields.get(3).getText());
+        setrequestmsgbytes(fields.get(4).getText());
+        setresponsemsgbytes(fields.get(5).getText());
+        setthinksecs(fields.get(6).getText());
+        for(int i = 7; i < fields.size(); i++) {
+            JTextField field = fields.get(i);
+            if(requestServiceFieldMap.containsKey(field)) {
+                String type = requestServiceFieldMap.get(field).getType();
+                if(type.equals("Client")) {
+                    // TODO: figure out what to do with client component
+                }
+                else if(type.equals("ApplicationServer")) {
+                    setreqappsecs(field.getText());
+                }
+                else if(type.equals("DatabaseServer")) {
+                    setreqdbsecs(field.getText());
+                }
+                else if(type.equals("MiddlewareServer")) {
+                    setreqmidsecs(field.getText());
+                }
+                else if(type.equals("Wan")) {
+                    setreqwansecs(field.getText());
+                }
+                else if(type.equals("WebfrontendServer")) {
+                    setreqwebsecs(field.getText());
+                }
+                else if(type.equals("Loadbalancer")) {
+                    setreqlbsecs(field.getText());
+                }
+
+            }
+            else if(requestQueueFieldMap.containsKey(field)) {
+                String type = requestQueueFieldMap.get(field).getType();
+                if(type.equals("Client")) {
+                    // TODO: figure out what to do with client component
+                }
+                else if(type.equals("ApplicationServer")) {
+                    setreqappquesecs(field.getText());
+                }
+                else if(type.equals("DatabaseServer")) {
+                    setreqdbquesecs(field.getText());
+                }
+                else if(type.equals("MiddlewareServer")) {
+                    setreqmidquesecs(field.getText());
+                }
+                else if(type.equals("Wan")) {
+                    setreqwanquesecs(field.getText());
+                }
+                else if(type.equals("WebfrontendServer")) {
+                    setreqwebquesecs(field.getText());
+                }
+                else if(type.equals("Loadbalancer")) {
+                    setreqlbquesecs(field.getText());
+                }
+            }
+            else if(responseServiceFieldMap.containsKey(field)) {
+                String type = responseServiceFieldMap.get(field).getType();
+                if(type.equals("ApplicationServer")) {
+                    setreqappsecs(field.getText());
+                }
+                else if(type.equals("MiddlewareServer")) {
+                    setreqmidsecs(field.getText());
+                }
+                else if(type.equals("WebfrontendServer")) {
+                    setreqwebsecs(field.getText());
+                }
+                else if(type.equals("Loadbalancer")) {
+                    setreqlbsecs(field.getText());
+                }
+
+            }
+            else if(responseQueueFieldMap.containsKey(field)) {
+                String type = responseQueueFieldMap.get(field).getType();
+                if(type.equals("ApplicationServer")) {
+                    setreqappquesecs(field.getText());
+                }
+                else if(type.equals("MiddlewareServer")) {
+                    setreqmidquesecs(field.getText());
+                }
+                else if(type.equals("WebfrontendServer")) {
+                    setreqwebquesecs(field.getText());
+                }
+                else if(type.equals("Loadbalancer")) {
+                    setreqlbquesecs(field.getText());
+                }
+            }
+        }
     }
 
     public String getruntitle() {
