@@ -236,43 +236,47 @@ public class SimGUI extends JFrame {
                 List<simgui.Component> components = new ArrayList<simgui.Component>();
                 setVisible(false);
                 String json = readFile("");
-                System.out.println("The file contained: \n" + json);
-                JSONObject jsonObject;
-                try {
-                    jsonObject = new JSONObject(json);
-                } catch (Exception e) {
-                    System.err.println("Failed to convert the JSON to a JSONObject.");
-                    e.printStackTrace();
-                    jsonObject = new JSONObject();
-                }
-
-                JSONArray jsonArray;
-                try {
-                    jsonArray = jsonObject.getJSONArray("components");
-                } catch (Exception e) {
-                    System.err.println("Failed to get the JSONArray with key \"components\" from the JSONObject");
-                    e.printStackTrace();
-                    jsonArray = new JSONArray();
-                }
-
-                Gson gson = new Gson();
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    simgui.Component component;
-
+                if (!(json.compareTo("") == 0)) {
+                    System.out.println("The file contained: \n" + json);
+                    JSONObject jsonObject;
                     try {
-                        component = gson.fromJson(jsonArray.getJSONObject(i).toString(), simgui.Component.class);
+                        jsonObject = new JSONObject(json);
                     } catch (Exception e) {
-                        System.err.println("Failed to convert the JSON at index " + i + " to a Component.");
+                        System.err.println("Failed to convert the JSON to a JSONObject.");
                         e.printStackTrace();
-                        component = new simgui.Component();
+                        jsonObject = new JSONObject();
                     }
 
-                    // Add the newly created components to our component list.
-                    components.add(component);
+                    JSONArray jsonArray;
+                    try {
+                        jsonArray = jsonObject.getJSONArray("components");
+                    } catch (Exception e) {
+                        System.err.println("Failed to get the JSONArray with key \"components\" from the JSONObject");
+                        e.printStackTrace();
+                        jsonArray = new JSONArray();
+                    }
 
+                    Gson gson = new Gson();
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        simgui.Component component;
+
+                        try {
+                            component = gson.fromJson(jsonArray.getJSONObject(i).toString(), simgui.Component.class);
+                        } catch (Exception e) {
+                            System.err.println("Failed to convert the JSON at index " + i + " to a Component.");
+                            e.printStackTrace();
+                            component = new simgui.Component();
+                        }
+
+                        // Add the newly created components to our component list.
+                        components.add(component);
+
+                    }
+
+                    new SimGUI(components);
+                } else {
+                    setVisible(true);
                 }
-
-                new SimGUI(components);
             }
         };
 
@@ -446,9 +450,10 @@ public class SimGUI extends JFrame {
             if (returnValue == JFileChooser.APPROVE_OPTION) {
                 openFile = openFileChooser.getSelectedFile();
                 strFile = openFile.getAbsolutePath();
+                strFile = new Scanner(new File(strFile)).useDelimiter("\\Z").next();
+                return strFile;
             }
-            strFile = new Scanner(new File(strFile)).useDelimiter("\\Z").next();
-            return strFile;
+            return "";
         } catch (Exception e) {
             System.err.println("Failed to open the file. Make sure that mJsonFileLoc is pointing to the right location!.");
             e.printStackTrace();
