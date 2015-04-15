@@ -18,4 +18,6 @@ jar {
     manifest {
         attributes 'Main-Class': 'simgui.SimGUI'
     }
+    baseName = 'simgui'
+    version = ''
 }
