@@ -65,7 +65,7 @@ public class SimGUI extends JFrame {
     This structure will be quite important to understand when we start parsing it out.
      */
 
-    public SimGUI(List<Component> components) {
+    public SimGUI(final List<Component> components) {
         super("Simulation Configuration"); // title of window
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
@@ -122,7 +122,7 @@ public class SimGUI extends JFrame {
             It's 6am and I'm exhausted, so I'm really not making any progress.
          */
 
-        ArrayList<String> defaultLabels = new ArrayList<>();
+        ArrayList<String> defaultLabels = new ArrayList<String>();
 
         defaultLabels.add("Simulation Name");
         defaultLabels.add("Simulation Type");
@@ -233,7 +233,7 @@ public class SimGUI extends JFrame {
         ActionListener manfBtnListener = new ActionListener(){
             public void actionPerformed(ActionEvent actionEvent) {
                 mouseClick = actionEvent.getSource();
-                List<simgui.Component> components = new ArrayList<>();
+                List<simgui.Component> components = new ArrayList<simgui.Component>();
                 setVisible(false);
                 String json = readFile("");
                 System.out.println("The file contained: \n" + json);
