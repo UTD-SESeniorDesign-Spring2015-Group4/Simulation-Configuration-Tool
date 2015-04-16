@@ -28,7 +28,7 @@ public class Field {
         RESPONSE_LOADBALANCER_QUEUE_TIME("Response Load Balance Queue Time Seconds%s", "rsplbquesecs", new FieldValidator[] {new NonNegativeNumberFieldValidator()}),
         REQUEST_WEB_SERVICE_TIME("Request Web Service Time Seconds%s", "reqwebsecs", new FieldValidator[] {new RangeFieldValidator(0.0001, 10)}),
         RESPONSE_WEB_SERVICE_TIME("Response Web Service Time Seconds%s", "rspwebsecs", new FieldValidator[] {new RangeFieldValidator(0.0001, 10)}),
-        REQUEST_WEB_QUEUE_TIME("Request Web Queue Time Seconds%s", "recwebquesecs", new FieldValidator[] {new NonNegativeNumberFieldValidator()}),
+        REQUEST_WEB_QUEUE_TIME("Request Web Queue Time Seconds%s", "reqwebquesecs", new FieldValidator[] {new NonNegativeNumberFieldValidator()}),
         RESPONSE_WEB_QUEUE_TIME("Response Web Queue Time Seconds%s", "rspwebquesecs", new FieldValidator[] {new NonNegativeNumberFieldValidator()}),
         REQUEST_MIDDLEWARE_SERVICE_TIME("Request MiddleWare Service Time Seconds%s", "reqmidsecs", new FieldValidator[] {new RangeFieldValidator(0.0001, 10)}),
         RESPONSE_MIDDLEWARE_SERVICE_TIME("Response MiddleWare Service Time Seconds%s", "rspmidsecs", new FieldValidator[] {new RangeFieldValidator(0.0001, 10)}),
@@ -59,7 +59,7 @@ public class Field {
                 if (type.xmlTag.equalsIgnoreCase(tag))
                     return type;
             }
-            throw new IllegalArgumentException("This tag does not have an associated FieldType");
+            throw new IllegalArgumentException("The tag \"" + tag + "\" does not have an associated FieldType");
         }
     };
 
