@@ -221,8 +221,7 @@ public class SimGUI extends JFrame {
                         // Remove all fields and add new ones based on the xml configuration.
                         removeAllFields();
                         for(Element element : elements) {
-                            Field field = new Field(element);
-                            field.addTo(labelPanel, fieldPanel);
+                            addField(new Field(element));
                         }
                     } catch(IOException e) {
                         e.printStackTrace();
@@ -252,7 +251,10 @@ public class SimGUI extends JFrame {
                 // Check if user actually picked a file.
                 if (returnValue == JFileChooser.APPROVE_OPTION) {
                     File saveFile = saveFileChooser.getSelectedFile();
-                    saveXML(saveFile);
+                    String fileStr = saveFile.getAbsolutePath();
+                    if(!fileStr.endsWith(".xml"))
+                        saveFile = new File(fileStr+".xml");
+                    saveXML(saveFile, true);
                 }
             }
         };
@@ -378,7 +380,7 @@ public class SimGUI extends JFrame {
     }
 
 
-    public boolean saveXML(File saveFile) {
+    public boolean saveXML(File saveFile, boolean stripAttributes) {
         try {
             // Create an empty Document
             DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
@@ -392,6 +394,9 @@ public class SimGUI extends JFrame {
             // Convert each field to XML and append to <component> element
             for (Field field : fields) {
                 Element fieldElement = field.toXML(doc);
+                if(stripAttributes) {
+                    fieldElement.removeAttribute("name");
+                }
                 rootElement.appendChild(fieldElement);
             }
 
@@ -461,7 +466,7 @@ public class SimGUI extends JFrame {
         }
 
         // Attempt to save the XML file to send to the simulation
-        boolean success = saveXML(tempFile);
+        boolean success = saveXML(tempFile, true);
         if (success) { // no errors during save - ie all entries are valid
             try {
                 Runtime r = Runtime.getRuntime();
