@@ -5,13 +5,12 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -28,274 +27,209 @@ import java.io.*;
 import java.util.*;
 import java.util.List;
 
-// These require java-json (http://www.json.org/java/).
-// This requires json (https://code.google.com/p/google-gson/).
-
 public class SimGUI extends JFrame {
 
     final String SIMULATION_FILE_NAME = "SimCmdv10.py";
-    ArrayList<JTextField> fields;
-    static File openFile;
-    File saveFile;
-    File outputFile;
-    String currentConfiguration;
-    JTextArea simulationOutput;
-    JPanel mainPanel;
-    JPanel bottomPanel;
-    double widthPercent = 0.33;
-    double heightPercent = 0.75;
-    Simulationrun currentConfig;
-    Object mouseClick;
-    Map<JTextField, Component> requestServiceFieldMap, requestQueueFieldMap, responseServiceFieldMap, responseQueueFieldMap;
+    private JPanel labelPanel, fieldPanel;
+    private JTextArea simulationOutput;
+    private List<Field> fields;
 
-    // Will be set to true if we have read in a custom topology configuration, false otherwise.
-    boolean customConfig = true;
+    public SimGUI() {
+        // Set the window title.
+        super("Simulation Configuration");
 
-    //Make simgui.Component Class
-    //Use an array list to read all of the component names, and values (maybe types too)
-    //traverse through arraylist with for or for each loop
-    //Update GUI to reflect the changes (make jtext of arr[1, 2, etc]
-
-    // The location of the json file we will be importing.
-    /*
-    Take note of the structure of the JSON file as this is quite important. You can see the the outermost element of the
-    file is an array. You can tell this because it is surrounded by curly braces ('{' and '}'). Inside of that object,
-    we have a key ("components") that is pointing to an array. You can tell it is an array as it is surrounded by square
-    brackets ('[' and ']'). Inside this array we have more objects each with 4 fields for "id" "name" "type" "connections".
-    This structure will be quite important to understand when we start parsing it out.
-     */
-
-    public SimGUI(final List<Component> components) {
-        super("Simulation Configuration"); // title of window
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
-        JScrollPane mainScrollPane;
-        JScrollPane bottomScrollPane;
-        mainPanel = new JPanel(new GridLayout(0, 2)); // panel to hold text fields and their labels
-        JPanel labelPanel = new JPanel(new GridLayout(0, 1)); // panel to hold text field labels
-        JPanel fieldPanel = new JPanel(new GridLayout(0, 1)); // panel to hold text fields
+        // Create global list of fields.
+        fields = new ArrayList<Field>();
 
-        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT)); // panel to hold buttons
-        bottomPanel = new JPanel(new BorderLayout()); // panel to hold simulation results
-        JPanel bottomLabelPanel = new JPanel(new GridLayout(1, 1)); // panel for simulation results label
-
-        JButton openBtn = new JButton("Open Configuration"); // button to open an XML file
-        JButton saveBtn = new JButton("Save Configuration"); // button to save an XML file
-        JButton startBtn = new JButton("Start"); // button to start the simulation
-        JButton outputBtn = new JButton("Save Output"); // button to save simulation results
-        JButton manfBtn = new JButton("Open Manifest File"); // button to open manf file
-
-        simulationOutput = new JTextArea(15, 25); // text area to hold simulation results
-        JLabel outputLabel = new JLabel("Simulation Output: ", JLabel.LEFT); // label for simulation results
-
+        // Input fields and their labels.
+        JPanel mainPanel = new JPanel(new GridLayout(0, 2));
+        labelPanel = new JPanel(new GridLayout(0, 1));
+        fieldPanel = new JPanel(new GridLayout(0, 1));
         mainPanel.add(labelPanel, BorderLayout.WEST);
         mainPanel.add(fieldPanel, BorderLayout.CENTER);
 
+        // Buttons.
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton openBtn = new JButton("Open Configuration");
+        JButton saveBtn = new JButton("Save Configuration");
+        JButton startBtn = new JButton("Start");
+        JButton outputBtn = new JButton("Save Output");
+        JButton manfBtn = new JButton("Open Manifest File");
         getContentPane().add(topPanel, BorderLayout.NORTH);
+        topPanel.add(openBtn);
+        topPanel.add(saveBtn);
+        topPanel.add(startBtn);
+        topPanel.add(outputBtn);
+        topPanel.add(manfBtn);
+
+        // Simulation results.
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        JPanel bottomLabelPanel = new JPanel(new GridLayout(1, 1));
+        simulationOutput = new JTextArea(15, 25);
+        JLabel outputLabel = new JLabel("Simulation Output: ", JLabel.LEFT);
         getContentPane().add(bottomPanel, BorderLayout.SOUTH);
+        bottomLabelPanel.add(outputLabel);
+        outputLabel.setLabelFor(simulationOutput);
+        simulationOutput.setEditable(false);
 
-        fields = new ArrayList<JTextField>();
-        requestServiceFieldMap = new HashMap<JTextField, Component>();
-        requestQueueFieldMap = new HashMap<JTextField, Component>();
-        responseServiceFieldMap = new HashMap<JTextField, Component>();
-        responseQueueFieldMap = new HashMap<JTextField, Component>();
-
-        /*
-         * Creating the text fields, setting their width, creating their label, adding label to the label panel, adding text field to text field panel.
-         */
-
-        /* Cameron this is the part that I added in, but it is not working right.
-            My logic is that if the manf button is clicked it will display
-            the request and response labels then the component name.
-            This is what I understood from both your example and Jon's example.
-            So basically it should display Request WAN Service Time Seconds (Cameron)
-                                            Request WAN Queue Time Seconds (Cameron)
-                                            so and and so forth.
-            I did this because it Jon sent me this
-            "Request WAN Service Time Seconds (<insert component name here>)"
-            So that is what I understood.
-            He also said this "It didn't look like each component had the two required fields either, have you fixed that?"
-            But I didn't get a chance to clarify, so no I dont think I have this done.
-            I'm going to ask Jon if he wanted the request and response stuff listed out like the original java program
-            but each component name will be displayed next to one.
-            Because that's going to be a shit load of lines.
-            It's 6am and I'm exhausted, so I'm really not making any progress.
-         */
-
-        ArrayList<String> defaultLabels = new ArrayList<String>();
-
-        defaultLabels.add("Simulation Name");
-        defaultLabels.add("Simulation Type");
-        defaultLabels.add("Number of Users");
-        defaultLabels.add("WAN Roundtrip MS");
-        defaultLabels.add("Request Message Bytes");
-        defaultLabels.add("Response Message Bytes");
-        defaultLabels.add("Think Seconds");
-
-        if(components == null) {
-            defaultLabels.add("Request WAN Service Time Seconds");
-            defaultLabels.add("Request WAN Queue Time Seconds");
-            defaultLabels.add("Request Load Balance Service Time Seconds");
-            defaultLabels.add("Request Load Balance Queue Time Seconds");
-            defaultLabels.add("Request Web Service Time Seconds");
-            defaultLabels.add("Request Web Queue Time Seconds");
-            defaultLabels.add("Request MiddleWare Service Time Seconds");
-            defaultLabels.add("Request MiddleWare Queue Time Seconds");
-            defaultLabels.add("Request Application Service Time Seconds");
-            defaultLabels.add("Request Application Queue Time Seconds");
-            defaultLabels.add("Request Database Service Time Seconds");
-            defaultLabels.add("Request Database Queue Time Seconds");
-            defaultLabels.add("Response Application Service Time Seconds");
-            defaultLabels.add("Response Application Queue Time Seconds");
-            defaultLabels.add("Response MiddleWare Service Time Seconds");
-            defaultLabels.add("Response MiddleWare Queue Time Seconds");
-            defaultLabels.add("Response Web Service Time Seconds");
-            defaultLabels.add("Response Web Queue Time Seconds");
-            defaultLabels.add("Response Load Balance Service Time Seconds");
-            defaultLabels.add("Response Load Balance Queue Time Seconds");
-            customConfig = false;
-        }
-
-        for(int i = 0; i < defaultLabels.size(); i++){
-            JLabel lab = new JLabel(defaultLabels.get(i), JLabel.LEFT);
-            labelPanel.add(lab);
-
-            JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
-            JTextField field = new JTextField();
-            field.setColumns(20);
-            fields.add(field);
-            p.add(field);
-            fieldPanel.add(p);
-        }
-        if(components != null) {
-            for (int i = 0; i < components.size(); i++) {
-                Component component = components.get(i);
-                String type = component.getType();
-                // Create Request Service time field
-                JLabel labService = new JLabel(component.getRequestServiceFieldLabel(), JLabel.LEFT);
-                labelPanel.add(labService);
-
-                JPanel pService = new JPanel(new FlowLayout(FlowLayout.LEFT));
-                JTextField fieldService = new JTextField();
-                fieldService.setColumns(20);
-                fields.add(fieldService);
-                requestServiceFieldMap.put(fieldService, component);
-                pService.add(fieldService);
-                fieldPanel.add(pService);
-
-                // Create Request Queue time field
-                JLabel labQueue = new JLabel(component.getRequestQueueFieldLabel(), JLabel.LEFT);
-                labelPanel.add(labQueue);
-
-                JPanel pQueue = new JPanel(new FlowLayout(FlowLayout.LEFT));
-                JTextField fieldQueue = new JTextField();
-                fieldQueue.setColumns(20);
-                fields.add(fieldQueue);
-                requestQueueFieldMap.put(fieldQueue, component);
-                pQueue.add(fieldQueue);
-                fieldPanel.add(pQueue);
-
-                if(type.equals("ApplicationServer") || type.equals("MiddlewareServer") || type.equals("WebfrontendServer") || type.equals("Loadbalancer")) {
-                    // Create Response Service time field
-                    JLabel labRspService = new JLabel(component.getResponseServiceFieldLabel(), JLabel.LEFT);
-                    labelPanel.add(labRspService);
-
-                    JPanel pRspService = new JPanel(new FlowLayout(FlowLayout.LEFT));
-                    JTextField fieldRspService = new JTextField();
-                    fieldRspService.setColumns(20);
-                    fields.add(fieldRspService);
-                    responseServiceFieldMap.put(fieldRspService, component);
-                    pRspService.add(fieldRspService);
-                    fieldPanel.add(pRspService);
-
-                    // Create Response Queue time field
-                    JLabel labRspQueue = new JLabel(component.getResponseQueueFieldLabel(), JLabel.LEFT);
-                    labelPanel.add(labRspQueue);
-
-                    JPanel pRspQueue = new JPanel(new FlowLayout(FlowLayout.LEFT));
-                    JTextField fieldRspQueue = new JTextField();
-                    fieldRspQueue.setColumns(20);
-                    fields.add(fieldRspQueue);
-                    responseQueueFieldMap.put(fieldRspQueue, component);
-                    pRspQueue.add(fieldRspQueue);
-                    fieldPanel.add(pRspQueue);
-                }
-            }
-        }
-
-
-
+        // Setup main window pane.
+        JScrollPane mainScrollPane;
         mainScrollPane = new JScrollPane(mainPanel); // scroll pane to hold text fields and their labels.
         mainScrollPane.getVerticalScrollBar().setUnitIncrement(16); // increase scroll speed
         getContentPane().add(mainScrollPane, BorderLayout.CENTER);
 
-        // Action listener for the manf button
+        // Set up bottom window pane.
+        JScrollPane bottomScrollPane;
+        bottomScrollPane = new JScrollPane(simulationOutput);
+        bottomPanel.add(bottomScrollPane, BorderLayout.CENTER);
+        bottomPanel.add(bottomLabelPanel, BorderLayout.WEST);
+
+        // Create static fields.
+        setupStaticFields();
+
+        // Create the default fields.
+        addField(new Field(Field.FieldType.REQUEST_WAN_SERVICE_TIME));
+        addField(new Field(Field.FieldType.REQUEST_WAN_QUEUE_TIME));
+        addField(new Field(Field.FieldType.REQUEST_LOADBALANCER_SERVICE_TIME));
+        addField(new Field(Field.FieldType.REQUEST_LOADBALANCER_QUEUE_TIME));
+        addField(new Field(Field.FieldType.REQUEST_WEB_SERVICE_TIME));
+        addField(new Field(Field.FieldType.REQUEST_WEB_QUEUE_TIME));
+        addField(new Field(Field.FieldType.REQUEST_MIDDLEWARE_SERVICE_TIME));
+        addField(new Field(Field.FieldType.REQUEST_MIDDLEWARE_QUEUE_TIME));
+        addField(new Field(Field.FieldType.REQUEST_APPLICATION_SERVICE_TIME));
+        addField(new Field(Field.FieldType.REQUEST_APPLICATION_QUEUE_TIME));
+        addField(new Field(Field.FieldType.REQUEST_DATABASE_SERVICE_TIME));
+        addField(new Field(Field.FieldType.REQUEST_DATABASE_QUEUE_TIME));
+        addField(new Field(Field.FieldType.RESPONSE_APPLICATION_SERVICE_TIME));
+        addField(new Field(Field.FieldType.RESPONSE_APPLICATION_QUEUE_TIME));
+        addField(new Field(Field.FieldType.RESPONSE_MIDDLEWARE_SERVICE_TIME));
+        addField(new Field(Field.FieldType.RESPONSE_MIDDLEWARE_QUEUE_TIME));
+        addField(new Field(Field.FieldType.RESPONSE_WEB_SERVICE_TIME));
+        addField(new Field(Field.FieldType.RESPONSE_WEB_QUEUE_TIME));
+        addField(new Field(Field.FieldType.RESPONSE_LOADBALANCER_SERVICE_TIME));
+        addField(new Field(Field.FieldType.RESPONSE_LOADBALANCER_QUEUE_TIME));
+
+        // Set up button listeners.
+        // Action listener for the Open Manifest File button.
         ActionListener manfBtnListener = new ActionListener(){
             public void actionPerformed(ActionEvent actionEvent) {
-                mouseClick = actionEvent.getSource();
-                List<simgui.Component> components = new ArrayList<simgui.Component>();
-                setVisible(false);
-                String json = readFile("");
-                if (!(json.compareTo("") == 0)) {
-                    System.out.println("The file contained: \n" + json);
-                    JSONObject jsonObject;
-                    try {
-                        jsonObject = new JSONObject(json);
-                    } catch (Exception e) {
-                        System.err.println("Failed to convert the JSON to a JSONObject.");
-                        e.printStackTrace();
-                        jsonObject = new JSONObject();
+                List<simgui.Component> components = new ArrayList<Component>();
+
+                // Prompt the user for and read in a Topology Manifest file.
+                try {
+                    // Hide the main window.
+                    setVisible(false);
+
+                    // Display a file chooser.
+                    JFileChooser fileChooser = new JFileChooser();
+                    FileNameExtensionFilter mfstFilter = new FileNameExtensionFilter("manf files (*.manf)", "manf");
+                    fileChooser.setFileFilter(mfstFilter);
+                    int returnValue = fileChooser.showOpenDialog(null);
+
+                    String fileContent;
+
+                    // Check if the user actually selected a file.
+                    if (returnValue == JFileChooser.APPROVE_OPTION) {
+                        File file = fileChooser.getSelectedFile();
+
+                        // Read in the user-selected file.
+                        fileContent = new Scanner(file).useDelimiter("\\Z").next();
+                    } else {
+
+                        // The user did not select a file, show the application.
+                        setVisible(true);
+                        return;
                     }
 
-                    JSONArray jsonArray;
-                    try {
-                        jsonArray = jsonObject.getJSONArray("components");
-                    } catch (Exception e) {
-                        System.err.println("Failed to get the JSONArray with key \"components\" from the JSONObject");
-                        e.printStackTrace();
-                        jsonArray = new JSONArray();
-                    }
+                    // Make sure that the file had content.
+                    if (!fileContent.isEmpty()) {
 
-                    Gson gson = new Gson();
-                    for (int i = 0; i < jsonArray.length(); i++) {
-                        simgui.Component component;
+                        // Create a JSONObject from the json string.
+                        JSONObject jsonObject = new JSONObject(fileContent);
 
-                        try {
-                            component = gson.fromJson(jsonArray.getJSONObject(i).toString(), simgui.Component.class);
-                        } catch (Exception e) {
-                            System.err.println("Failed to convert the JSON at index " + i + " to a Component.");
-                            e.printStackTrace();
-                            component = new simgui.Component();
+                        // Get the JSONArray that contains the components.
+                        JSONArray jsonArray = jsonObject.getJSONArray("components");
+
+                        // Create component objects from the components in the JSON.
+                        Gson gson = new Gson();
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            Component component = gson.fromJson(jsonArray.getJSONObject(i).toString(), Component.class);
+
+                            // Add the newly created component to our components list.
+                            components.add(component);
                         }
 
-                        // Add the newly created components to our component list.
-                        components.add(component);
+                        // Remove all the fields and add the new ones based on the components.
+                        removeAllFields();
+                        setupStaticFields();
+                        setupComponentFields(components);
 
+                        // Show the application
+                        setVisible(true);
+                    } else {
+                        // The file had no content, show the application.
+                        setVisible(true);
+                        JOptionPane.showMessageDialog(null, "There were no components in the file.", "File Format Error", JOptionPane.WARNING_MESSAGE);
                     }
-
-                    new SimGUI(components);
-                } else {
+                } catch (Exception e) {
+                    // Show the application and alert the user that there was a problem reading the file.
                     setVisible(true);
+                    JOptionPane.showMessageDialog(null, "There was an error reading in the file.", "File Opening Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
             }
         };
 
-        /*
-         * Action listener for the open button. Creates a JFile Chooser dialog box and gets the file they user selects.
-         */
+         // Action listener for the open button. Creates a JFile Chooser dialog box and gets the file they user selects.
         ActionListener openBtnListener = new ActionListener() {
             public void actionPerformed(ActionEvent actionEvent) {
+                // Create ArrayList to store elements in.
+                ArrayList<Element> elements = new ArrayList<Element>();
+
+                // Display a file chooser.
                 JFileChooser openFileChooser = new JFileChooser();
                 FileNameExtensionFilter xmlFilter = new FileNameExtensionFilter("xml files (*.xml)", "xml"); // filter to only show xml files
                 openFileChooser.setFileFilter(xmlFilter);
                 int returnValue = openFileChooser.showOpenDialog(null);
 
+                // Check if user actually picked a file.
                 if (returnValue == JFileChooser.APPROVE_OPTION) {
-                    openFile = openFileChooser.getSelectedFile();
+                    try {
+                        // Open file as an XML Document.
+                        File openFile = openFileChooser.getSelectedFile();
+                        DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+                        DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+                        Document doc = dBuilder.parse(openFile);
+                        doc.getDocumentElement().normalize();
 
-                    currentConfig = readXML(openFile);
+                        // Loop through the children nodes of the outer <components> tag.
+                        NodeList nodelist = doc.getFirstChild().getChildNodes();
+                        for (int i = 0; i < nodelist.getLength(); i++) {
+                            // Check if node is an element (which represents the tag).
+                            Node node = nodelist.item(i);
+                            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                                elements.add((Element) node);
+                            }
+                        }
 
-                    populateTextFieldsUponFileOpen(currentConfig);
+                        // Remove all fields and add new ones based on the xml configuration.
+                        removeAllFields();
+                        for(Element element : elements) {
+                            addField(new Field(element));
+                        }
+                    } catch(IOException e) {
+                        e.printStackTrace();
+                        JOptionPane.showMessageDialog(null, "There was an error reading in the file.", "File Opening Error", JOptionPane.ERROR_MESSAGE);
+                    } catch(SAXException e) {
+                        e.printStackTrace();
+                        JOptionPane.showMessageDialog(null, "There was an error parsing the file.", "File Parsing Error", JOptionPane.ERROR_MESSAGE);
+                    } catch (ParserConfigurationException e) {
+                        e.printStackTrace();
+                        JOptionPane.showMessageDialog(null, "I have no clue what this error means but it has something to do with XML parsing.", "File Parsing Error", JOptionPane.ERROR_MESSAGE);
+                    }
+
                 }
             }
         };
@@ -304,51 +238,19 @@ public class SimGUI extends JFrame {
         //action listener for save button.
         ActionListener saveBtnListener = new ActionListener() {
             public void actionPerformed(ActionEvent actionEvent) {
-
-                System.out.println("\nConfiguration: ");
-
+                // Display a file chooser.
                 JFileChooser saveFileChooser = new JFileChooser();
+                FileNameExtensionFilter xmlFilter = new FileNameExtensionFilter("xml files (*.xml)", "xml"); // filter to only show xml files
+                saveFileChooser.setFileFilter(xmlFilter);
                 int returnValue = saveFileChooser.showSaveDialog(null);
 
+                // Check if user actually picked a file.
                 if (returnValue == JFileChooser.APPROVE_OPTION) {
-                    saveFile = saveFileChooser.getSelectedFile();
-                    String fname = saveFile.getAbsolutePath();
-
-                    try {
-
-                        DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
-                        DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
-
-                        // root elements
-                        Document doc = docBuilder.newDocument();
-                        Element rootElement = doc.createElement("component");
-                        doc.appendChild(rootElement);
-
-                        for (int i = 0; i < components.size(); i++) {
-                            // component elements
-
-                            Element component = doc.createElement(components.get(i).toString().replaceAll("\\s",""));
-                            component.appendChild(doc.createTextNode(fields.get(i).getText()));
-                            rootElement.appendChild(component);
-                        }
-
-                        // write the content into xml file
-                        TransformerFactory transformerFactory = TransformerFactory.newInstance();
-                        Transformer transformer = transformerFactory.newTransformer();
-                        DOMSource source = new DOMSource(doc);
-                        StreamResult result = new StreamResult(new File(fname));
-
-                        transformer.transform(source, result);
-
-                        System.out.println("File saved!");
-
-                    } catch (ParserConfigurationException e) {
-                        e.printStackTrace();
-                    } catch (TransformerConfigurationException e) {
-                        e.printStackTrace();
-                    } catch (TransformerException e) {
-                        e.printStackTrace();
-                    }
+                    File saveFile = saveFileChooser.getSelectedFile();
+                    String fileStr = saveFile.getAbsolutePath();
+                    if(!fileStr.endsWith(".xml"))
+                        saveFile = new File(fileStr+".xml");
+                    saveXML(saveFile, true);
                 }
             }
         };
@@ -362,338 +264,206 @@ public class SimGUI extends JFrame {
 
         ActionListener outputBtnListener = new ActionListener() {
             public void actionPerformed(ActionEvent actionEvent) {
-                JFileChooser saveOutputFileChooser = new JFileChooser();
-                saveOutputFileChooser.setDialogTitle("Save Output");
-                int returnValue = saveOutputFileChooser.showSaveDialog(null);
+                // Prompt user where to save simulation output.
+                JFileChooser fileChooser = new JFileChooser();
+                fileChooser.setDialogTitle("Save Output");
+                // Add filter to pick only .txt files
+                FileNameExtensionFilter xmlFilter = new FileNameExtensionFilter("txt file (*.txt)", "txt");
+                fileChooser.setFileFilter(xmlFilter);
+                int returnValue = fileChooser.showSaveDialog(null);
 
+                // Check if the user actually selected a file.
                 if (returnValue == JFileChooser.APPROVE_OPTION) {
-                    outputFile = saveOutputFileChooser.getSelectedFile();
-                    String fname = outputFile.getAbsolutePath();
-
-                    if (!fname.endsWith(".txt")) { // if saved file doesn't end with .txt extention, add the extension
-                        outputFile = new File(fname + ".txt");
-                    }
                     try {
+                        // Write the simulation output to the specified file.
+                        File outputFile = fileChooser.getSelectedFile();
                         FileWriter fw = new FileWriter(outputFile.getAbsoluteFile());
                         BufferedWriter bw = new BufferedWriter(fw);
                         bw.write(simulationOutput.getText());
                         bw.close();
                     } catch (IOException e) {
+                        // Some error happened while writing to file, show the user an error.
                         e.printStackTrace();
+                        JOptionPane.showMessageDialog(null, "There was an error writing the simulation output to file.", "File Writing Error", JOptionPane.ERROR_MESSAGE);
                     }
+                } else {
+                    // User did not pick a file, do nothing.
+                    return;
                 }
             }
         };
 
+        // Add action listeners to their buttons.
         openBtn.addActionListener(openBtnListener);
         saveBtn.addActionListener(saveBtnListener);
         startBtn.addActionListener(startBtnListener);
         outputBtn.addActionListener(outputBtnListener);
         manfBtn.addActionListener(manfBtnListener);
 
-        topPanel.add(openBtn);
-        topPanel.add(saveBtn);
-        topPanel.add(startBtn);
-        topPanel.add(outputBtn);
-        topPanel.add(manfBtn);
-
-        bottomLabelPanel.add(outputLabel);
-        outputLabel.setLabelFor(simulationOutput);
-
-        simulationOutput.setEditable(false);
-
-        bottomScrollPane = new JScrollPane(simulationOutput);
-        bottomPanel.add(bottomScrollPane, BorderLayout.CENTER);
-        bottomPanel.add(bottomLabelPanel, BorderLayout.WEST);
-
         pack();
         setVisible(true);
     }
 
     public static void main(String args[]) {
-        new SimGUI(null);
+        new SimGUI();
     }
 
-    public static Simulationrun readXML(File inFile) {
-        try {
+    private void addField(Field field) {
+        fields.add(field);
+        field.addTo(labelPanel, fieldPanel);
+    }
 
-            // create new jaxb context
-            JAXBContext jaxbContext = JAXBContext.newInstance(Simulationrun.class);
+    private void removeAllFields() {
+        fields.clear();
+        labelPanel.removeAll();
+        fieldPanel.removeAll();
+        revalidate();
+        repaint();
+    }
 
-            // create new Unmarshaller  to convert xml to java object
-            Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
+    // Create static fields.
+    private void setupStaticFields() {
+        addField(new Field(Field.FieldType.SIMULATION_NAME));
+        addField(new Field(Field.FieldType.SIMULATION_TYPE));
+        addField(new Field(Field.FieldType.NUMBER_USERS));
+        addField(new Field(Field.FieldType.WAN_ROUNDTRIP_MS));
+        addField(new Field(Field.FieldType.REQUEST_MESSAGE_BYTES));
+        addField(new Field(Field.FieldType.RESPONSE_MESSAGE_BYTES));
+        addField(new Field(Field.FieldType.THINK_SECONDS));
+    }
 
-            // create configuration object from unmarshaller
-            Simulationrun readConfiguration = (Simulationrun) jaxbUnmarshaller.unmarshal(inFile);
+    private void setupComponentFields(List<Component> components) {
+        for(Component component : components) {
+            String type = component.getType();
+            String name = component.getName();
 
-            return readConfiguration;
-
-        } catch (JAXBException e) { // catch if input
-            e.printStackTrace();
+            if (type.equals("ApplicationServer")) {
+                addField(new Field(Field.FieldType.REQUEST_APPLICATION_SERVICE_TIME, name));
+                addField(new Field(Field.FieldType.REQUEST_APPLICATION_QUEUE_TIME, name));
+                addField(new Field(Field.FieldType.RESPONSE_APPLICATION_SERVICE_TIME, name));
+                addField(new Field(Field.FieldType.RESPONSE_APPLICATION_QUEUE_TIME, name));
+            }
+            else if (type.equals("Client")) {
+                //TODO: No behavior specified yet.
+            }
+            else if (type.equals("DatabaseServer")) {
+                addField(new Field(Field.FieldType.REQUEST_DATABASE_SERVICE_TIME, name));
+                addField(new Field(Field.FieldType.REQUEST_DATABASE_QUEUE_TIME, name));
+            }
+            else if (type.equals("Loadbalancer")) {
+                addField(new Field(Field.FieldType.REQUEST_LOADBALANCER_SERVICE_TIME, name));
+                addField(new Field(Field.FieldType.REQUEST_LOADBALANCER_QUEUE_TIME, name));
+                addField(new Field(Field.FieldType.RESPONSE_LOADBALANCER_SERVICE_TIME, name));
+                addField(new Field(Field.FieldType.RESPONSE_LOADBALANCER_QUEUE_TIME, name));
+            }
+            else if (type.equals("MiddlewareServer")) {
+                addField(new Field(Field.FieldType.REQUEST_MIDDLEWARE_SERVICE_TIME, name));
+                addField(new Field(Field.FieldType.REQUEST_MIDDLEWARE_QUEUE_TIME, name));
+                addField(new Field(Field.FieldType.RESPONSE_MIDDLEWARE_SERVICE_TIME, name));
+                addField(new Field(Field.FieldType.RESPONSE_MIDDLEWARE_QUEUE_TIME, name));
+            }
+            else if (type.equals("Wan")) {
+                addField(new Field(Field.FieldType.REQUEST_WAN_SERVICE_TIME, name));
+                addField(new Field(Field.FieldType.REQUEST_WAN_QUEUE_TIME, name));
+            }
+            else if (type.equals("WebfrontendServer")) {
+                addField(new Field(Field.FieldType.REQUEST_WEB_SERVICE_TIME, name));
+                addField(new Field(Field.FieldType.REQUEST_WEB_QUEUE_TIME, name));
+                addField(new Field(Field.FieldType.RESPONSE_WEB_SERVICE_TIME, name));
+                addField(new Field(Field.FieldType.RESPONSE_WEB_QUEUE_TIME, name));
+            }
         }
-        return null;
     }
+
+
+    public boolean saveXML(File saveFile, boolean stripAttributes) {
+        try {
+            // Create an empty Document
+            DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
+            Document doc = docBuilder.newDocument();
+
+            // Create root <component> element
+            Element rootElement = doc.createElement("component");
+            doc.appendChild(rootElement);
+
+            // Convert each field to XML and append to <component> element
+            for (Field field : fields) {
+                Element fieldElement = field.toXML(doc);
+                if(stripAttributes) {
+                    fieldElement.removeAttribute("name");
+                }
+                rootElement.appendChild(fieldElement);
+            }
+
+            // Write the Document into the file chosen by user.
+            TransformerFactory transformerFactory = TransformerFactory.newInstance();
+            Transformer transformer = transformerFactory.newTransformer();
+            DOMSource source = new DOMSource(doc);
+            StreamResult result = new StreamResult(saveFile);
+            transformer.transform(source, result);
+            return true;
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "I have no clue what this error means but it has something to do with XML parsing.", "File Parsing Error", JOptionPane.ERROR_MESSAGE);
+        } catch (TransformerConfigurationException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "I have no clue what this error means but it has something to do with XML parsing.", "File Parsing Error", JOptionPane.ERROR_MESSAGE);
+        } catch (TransformerException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Unable to write XML to file.", "File Writing Error", JOptionPane.ERROR_MESSAGE);
+        }
+        return false;
+    }
+
 
     /**
-     * Returns a string containing the contents of the specified file.
-     *
-     * @param strFile The location of the file that will have its contents returned.
-     * @return A string containing the contents of the specified file.
+     * Validates all fields.
+     * @return true if all fields are valid, false if any field is invalid.
      */
-    private static String readFile(String strFile) {
-        try {
-            JFileChooser openFileChooser = new JFileChooser();
-            FileNameExtensionFilter mfstFilter = new FileNameExtensionFilter("manf files (*.manf)", "manf"); // filter to only show manifest files
-            openFileChooser.setFileFilter(mfstFilter);
-            int returnValue = openFileChooser.showOpenDialog(null);
-
-            if (returnValue == JFileChooser.APPROVE_OPTION) {
-                openFile = openFileChooser.getSelectedFile();
-                strFile = openFile.getAbsolutePath();
-                strFile = new Scanner(new File(strFile)).useDelimiter("\\Z").next();
-                return strFile;
-            }
-            return "";
-        } catch (Exception e) {
-            System.err.println("Failed to open the file. Make sure that mJsonFileLoc is pointing to the right location!.");
-            e.printStackTrace();
-            return "";
-        }
-    }
-
-    // TODO: Make this work with our dynamic fields
-    public void populateTextFieldsUponFileOpen(Simulationrun currentConfiguration) {
-
-        fields.get(0).setText(currentConfiguration.getruntitle());
-
-        fields.get(1).setText(currentConfiguration.getsimtype());
-
-        fields.get(2).setText(currentConfiguration.getnumusers());
-
-        fields.get(3).setText(currentConfiguration.getwanroundtripms());
-
-        fields.get(4).setText(currentConfiguration.getrequestmsgbytes());
-
-        fields.get(5).setText(currentConfiguration.getresponsemsgbytes());
-
-        fields.get(6).setText(currentConfiguration.getthinksecs());
-
-        fields.get(7).setText(currentConfiguration.getreqwansecs());
-        fields.get(8).setText(currentConfiguration.getreqwanquesecs());
-
-        fields.get(9).setText(currentConfiguration.getreqlbsecs());
-        fields.get(10).setText(currentConfiguration.getreqlbquesecs());
-
-        fields.get(11).setText(currentConfiguration.getreqwebsecs());
-        fields.get(12).setText(currentConfiguration.getreqwebquesecs());
-
-        fields.get(13).setText(currentConfiguration.getreqmidsecs());
-        fields.get(14).setText(currentConfiguration.getreqmidquesecs());
-
-        fields.get(15).setText(currentConfiguration.getreqappsecs());
-        fields.get(16).setText(currentConfiguration.getreqappquesecs());
-
-        fields.get(17).setText(currentConfiguration.getreqdbsecs());
-        fields.get(18).setText(currentConfiguration.getreqdbquesecs());
-
-        fields.get(19).setText(currentConfiguration.getrspappsecs());
-        fields.get(20).setText(currentConfiguration.getrspappquesecs());
-
-        fields.get(21).setText(currentConfiguration.getrspmidsecs());
-        fields.get(22).setText(currentConfiguration.getrspmidquesecs());
-
-        fields.get(23).setText(currentConfiguration.getrspwebsecs());
-        fields.get(24).setText(currentConfiguration.getrspwebquesecs());
-
-        fields.get(25).setText(currentConfiguration.getrsplbsecs());
-        fields.get(26).setText(currentConfiguration.getrsplbquesecs());
-    }
-
-    public int saveXML(File saveFile) {
-        int flag = createConfiguration();
-        try {
-            if (flag == 0) {
-                // create new jaxb context
-                JAXBContext jaxbContext = JAXBContext.newInstance(Simulationrun.class);
-
-                // create new marshaller to convert java object into a xml file
-                Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
-
-                // formatted output
-                jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-
-                jaxbMarshaller.marshal(currentConfig, saveFile);
-            }
-
-        } catch (JAXBException e) {
-            e.printStackTrace();
-        }
-        return flag;
-    }
-
-
-    public int createConfiguration() {
-        int flag = 0;
-        int result = validateFields();
-        if (result == 0) { // valid configuration
-            String[] values = new String[fields.size()];
-
-            for (int i = 0; i < values.length; i++) {
-                values[i] = fields.get(i).getText();
-            }
-
-            if (customConfig) {
-                currentConfig = new Simulationrun(fields, requestServiceFieldMap, requestQueueFieldMap, responseServiceFieldMap, responseQueueFieldMap);
-            } else {
-                currentConfig = new Simulationrun(values);
-            }
-        } else {
-            flag = 1;
-            switch (result) {
-                case -1:
-                    JOptionPane.showMessageDialog(null, "All fields must be filled", "Error " + result, JOptionPane.WARNING_MESSAGE);
-                    break;
-                case 101:
-                    JOptionPane.showMessageDialog(null, "Type of simulation must be 'finite' or 'infinite'", "Error " + result, JOptionPane.WARNING_MESSAGE);
-                    break;
-                case 102:
-                    JOptionPane.showMessageDialog(null, "Number of Users must be a whole number", "Error " + result, JOptionPane.WARNING_MESSAGE);
-                    break;
-                case 103:
-                    JOptionPane.showMessageDialog(null, "Round trip MS must be a whole number", "Error " + result, JOptionPane.WARNING_MESSAGE);
-                    break;
-                case 104:
-                    JOptionPane.showMessageDialog(null, "Request Message Bytes must be a whole number", "Error " + result, JOptionPane.WARNING_MESSAGE);
-                    break;
-                case 105:
-                    JOptionPane.showMessageDialog(null, "Response Message Bytes must be a decimal number", "Error " + result, JOptionPane.WARNING_MESSAGE);
-                    break;
-                case 106:
-                    JOptionPane.showMessageDialog(null, "Think seconds must be a decimal number", "Error " + result, JOptionPane.WARNING_MESSAGE);
-                    break;
-                case 202:
-                    JOptionPane.showMessageDialog(null, "Number of Users must be a positive number", "Error " + result, JOptionPane.WARNING_MESSAGE);
-                    break;
-                case 203:
-                    JOptionPane.showMessageDialog(null, "WAN Roundtrip MS must be a positive number", "Error " + result, JOptionPane.WARNING_MESSAGE);
-                    break;
-                case 204:
-                    JOptionPane.showMessageDialog(null, "Request Message Bytes must be a positive number", "Error " + result, JOptionPane.WARNING_MESSAGE);
-                    break;
-                case 205:
-                    JOptionPane.showMessageDialog(null, "Response Message Bytes must be a positive number", "Error " + result, JOptionPane.WARNING_MESSAGE);
-                    break;
-                case 206:
-                    JOptionPane.showMessageDialog(null, "Think seconds must be a positive number", "Error " + result, JOptionPane.WARNING_MESSAGE);
-                    break;
-                case 999:
-                    JOptionPane.showMessageDialog(null, "Service and Queue Response Times must be a positive number", "Error " + result, JOptionPane.WARNING_MESSAGE);
-                    break;
-                default:
-                    JOptionPane.showMessageDialog(null, "Error in text fields", "Error " + result, JOptionPane.WARNING_MESSAGE);
-                    break;
-            }
-            ;
-        }
-        return flag;
-    }
-
-    /*
-     * Error codes:
-     * 0: Success
-     * -1: There is an empty field
-     * 101: Simulation type is not "infinite" or "finite"
-     *
-     * * X denotes a position 02 through 26
-     * 1XX: Entered value is not a number
-     * 2XX: Value is negative
-     * 3XX: Value of service time is not between 0.0001 and 10 inclusive
-     */
-    public int validateFields() {
-        int error = 0;
-        for (int i = 0; i < fields.size(); i++) {
-            if (fields.get(i).getText().equals("")) { // empty field
-                error = -1;
-                System.out.println("empty field");
-                return error;
+    public boolean validateFields() {
+        // Go through the fields and store any errors returned while validating.
+        List<String> labels = new ArrayList<String>();
+        List<String> errors = new ArrayList<String>();
+        for(Field field : fields) {
+            String error = field.validate();
+            if(!error.isEmpty()) {
+                labels.add(field.getLabel());
+                errors.add(error);
             }
         }
 
-        if (!fields.get(1).getText().equals("infinite") && !fields.get(1).getText().equals("finite")) { // simulation type is not infinite or finite
-            error = 101;
-            System.out.println("Simulation Type not finite or infinite");
-            return error;
+        if(!errors.isEmpty()) {
+            // Build the HTML error message to show to the user.
+            StringBuilder htmlBuilder = new StringBuilder();
+            htmlBuilder.append("<html><body><p>There were some errors in the following fields:</p><br/><table>");
+            for(int k = 0; k < errors.size(); k++) {
+                htmlBuilder.append(String.format("<tr><td>%s</td><td>%s</td></tr>", labels.get(k), errors.get(k)));
+            }
+            htmlBuilder.append("</table></body></html>");
+            JOptionPane.showMessageDialog(null, htmlBuilder.toString(), "Validation Error", JOptionPane.ERROR_MESSAGE);
         }
 
-        for (int i = 2; i <= 5; i++) {
-            int temp = 0;
-            try {
-                temp = Integer.parseInt(fields.get(i).getText());
-            } catch (Exception e) { // not a number
-                error = 100 + i;
-                System.out.println("not a number");
-                return error;
-            }
-            if (temp < 0) {
-                error = 200 + i; // negative value
-                System.out.println("negative value");
-                return error;
-            }
-        }
-
-        for (int i = 5; i <= 6; i++) {
-            double temp = 0;
-            try {
-                temp = Double.parseDouble(fields.get(i).getText());
-            } catch (Exception e) { // not a number
-                error = 100 + i;
-                System.out.println("trouble in fields [5] and [6]");
-                return error;
-            }
-            if (temp < 0) { // negative value
-                error = 200 + i;
-                System.out.println("negative on this line");
-                return error;
-            }
-            if ((i % 2) != 0) { // if i is odd
-                if ((temp < 0.0001) || (temp > 10)) { //  service time is not between 0.0001 and 10 inclusive
-                    error = 300 + i;
-                    System.out.println("odd or service time is not between 0.0001 and 10 inclusive ");
-                    return error;
-                }
-            }
-        }
-
-        for(int i = 7; i<fields.size(); i++)
-        {
-            int temp = 0;
-            try {
-                temp = Integer.parseInt(fields.get(i).getText());
-            } catch (Exception e) { // not a number
-                error = 999;
-                System.out.println("not a number");
-                return error;
-            }
-            if (temp < 0) {
-                error = 999; // negative value
-                System.out.println("negative value");
-                return error;
-            }
-        }
-        return error;
+        return errors.isEmpty();
     }
 
     //Simulation Output
     public void startSimulation() {
-        String jarDir = "";
+        // Get a temporary file.
         File tempFile = new File(System.getProperty("java.io.tmpdir"), "temp");
 
         String results = "";
         String errors = "";
-        int flag;
 
-        flag = saveXML(tempFile);
-        if (flag == 0) { // no errors during save - ie all entries are valid
+        // Validate the fields and return if there were errors;
+        boolean valid = validateFields();
+        if(!valid) {
+            return;
+        }
+
+        // Attempt to save the XML file to send to the simulation
+        boolean success = saveXML(tempFile, true);
+        if (success) { // no errors during save - ie all entries are valid
             try {
                 Runtime r = Runtime.getRuntime();
                 Process p = r.exec("python " + SIMULATION_FILE_NAME + " " + tempFile.getPath());
