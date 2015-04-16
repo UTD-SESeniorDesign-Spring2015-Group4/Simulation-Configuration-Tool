@@ -38,7 +38,7 @@ public class SimGUI extends JFrame {
         // Set the window title.
         super("Simulation Configuration");
 
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         // Create global list of fields.
         fields = new ArrayList<Field>();
@@ -177,7 +177,6 @@ public class SimGUI extends JFrame {
                     // Show the application and alert the user that there was a problem reading the file.
                     setVisible(true);
                     JOptionPane.showMessageDialog(null, "There was an error reading in the file.", "File Opening Error", JOptionPane.ERROR_MESSAGE);
-                    return;
                 }
             }
         };
@@ -234,7 +233,6 @@ public class SimGUI extends JFrame {
             }
         };
 
-        // TODO: put this back the way it was using saveXML
         //action listener for save button.
         ActionListener saveBtnListener = new ActionListener() {
             public void actionPerformed(ActionEvent actionEvent) {
@@ -286,9 +284,6 @@ public class SimGUI extends JFrame {
                         e.printStackTrace();
                         JOptionPane.showMessageDialog(null, "There was an error writing the simulation output to file.", "File Writing Error", JOptionPane.ERROR_MESSAGE);
                     }
-                } else {
-                    // User did not pick a file, do nothing.
-                    return;
                 }
             }
         };
@@ -479,7 +474,7 @@ public class SimGUI extends JFrame {
                 while ((s = errorReader.readLine()) != null) {
                     errors += s + "\n";
                 }
-                if (results == "") { // error executing simulation
+                if (results.isEmpty()) {
                     simulationOutput.setText(errors);
                 } else {
                     simulationOutput.setText(results);
