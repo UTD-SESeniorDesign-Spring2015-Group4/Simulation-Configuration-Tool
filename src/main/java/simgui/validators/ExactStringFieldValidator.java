@@ -1,8 +1,5 @@
 package simgui.validators;
 
-/**
- * Created by jmdarling on 4/15/15.
- */
 public class ExactStringFieldValidator implements FieldValidator{
     private String[] validStrings;
 
@@ -15,7 +12,7 @@ public class ExactStringFieldValidator implements FieldValidator{
     public String validate(String value) {
         for (String validString : validStrings) {
             if (value.equals(validString)) {
-                return null;
+                return "";
             }
         }
 

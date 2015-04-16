@@ -1,8 +1,5 @@
 package simgui.validators;
 
-/**
- * Created by jmdarling on 4/15/15.
- */
 public class RangeFieldValidator implements FieldValidator {
     private double rangeStart;
     private double rangeEnd;
@@ -29,6 +26,6 @@ public class RangeFieldValidator implements FieldValidator {
         if (temp < rangeStart || temp > rangeEnd) {
             return "Value must between " + rangeStart + " and " +rangeEnd + ".";
         }
-        return null;
+        return "";
     }
 }
