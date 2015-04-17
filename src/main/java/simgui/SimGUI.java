@@ -29,6 +29,8 @@ import java.util.List;
 
 public class SimGUI extends JFrame {
 
+    final boolean DEBUG = true;
+
     final String SIMULATION_FILE_NAME = "SimCmdv10.py";
     private JPanel labelPanel, fieldPanel;
     private JTextArea simulationOutput;
@@ -215,9 +217,12 @@ public class SimGUI extends JFrame {
 
                         // Remove all fields and add new ones based on the xml configuration.
                         removeAllFields();
+                        printDebug("Creating and adding fields from XML configuration.");
                         for(Element element : elements) {
+                            printDebug("Creating and adding field for element: \"" + element.getTagName() + "\" with " + (element.getAttribute("name").isEmpty() ? (" value: \"") : " name attribute: \"" + element.getAttribute("name") + "\" and value: \"") + element.getTextContent() + "\"");
                             addField(new Field(element));
                         }
+                        printDebug("Finished creating and adding fields from XML configuration.\n");
                     } catch(IOException e) {
                         e.printStackTrace();
                         JOptionPane.showMessageDialog(null, "There was an error reading in the file.", "File Opening Error", JOptionPane.ERROR_MESSAGE);
@@ -306,6 +311,7 @@ public class SimGUI extends JFrame {
     private void addField(Field field) {
         fields.add(field);
         field.addTo(labelPanel, fieldPanel);
+        setVisible(true);
     }
 
     private void removeAllFields() {
@@ -486,6 +492,12 @@ public class SimGUI extends JFrame {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private void printDebug(String content) {
+        if (DEBUG) {
+            System.out.println("DEBUG: " + content);
         }
     }
 }
