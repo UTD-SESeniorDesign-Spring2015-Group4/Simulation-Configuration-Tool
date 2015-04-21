@@ -420,6 +420,7 @@ public class SimGUI extends JFrame {
         // Go through the fields and store any errors returned while validating.
         List<String> labels = new ArrayList<String>();
         List<String> errors = new ArrayList<String>();
+		
         for(Field field : fields) {
             String error = field.validate();
             if(!error.isEmpty()) {
@@ -483,8 +484,10 @@ public class SimGUI extends JFrame {
                 tempFile.delete();
             } catch (IOException e) {
                 e.printStackTrace();
+                simulationOutput.setText(e.toString());
             } catch (InterruptedException e) {
                 e.printStackTrace();
+                simulationOutput.setText(e.toString());
             }
         }
     }
