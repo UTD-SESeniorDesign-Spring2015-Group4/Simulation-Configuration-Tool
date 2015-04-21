@@ -27,21 +27,12 @@ import java.io.*;
 import java.util.*;
 import java.util.List;
 
-//import java.awt.Color;
-//import javax.swing.JTextField;
-//import javax.swing.text.DefaultHighlighter;
-//import javax.swing.text.Highlighter;
-
 public class SimGUI extends JFrame {
 
     final String SIMULATION_FILE_NAME = "SimCmdv10.py";
     private JPanel labelPanel, fieldPanel;
     private JTextArea simulationOutput;
     private List<Field> fields;
-	
-	//final static Color ERROR_COLOR = Color.YELLOW;
-	//public Highlighter hilit;
-	//public Highlighter.HighlightPainter painter;
 
     public SimGUI() {
         // Set the window title.
@@ -430,15 +421,11 @@ public class SimGUI extends JFrame {
         List<String> labels = new ArrayList<String>();
         List<String> errors = new ArrayList<String>();
 		
-		//hilit = new DefaultHighlighter();
-		//painter = new DefaultHighlighter.DefaultHighlightPainter(ERROR_COLOR);
-		
         for(Field field : fields) {
             String error = field.validate();
             if(!error.isEmpty()) {
                 labels.add(field.getLabel());
                 errors.add(error);
-                //field.textField.setHighlighter(hilit);
             }
         }
 
