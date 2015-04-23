@@ -5,11 +5,17 @@ import org.w3c.dom.Element;
 import simgui.validators.*;
 
 import javax.swing.*;
+import javax.swing.text.DefaultHighlighter;
+import javax.swing.text.Highlighter;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Field {
+
+    final static Color ERROR_COLOR = Color.YELLOW;
+    public Highlighter hilit;
+    public Highlighter.HighlightPainter painter;
 
     /**
      * Enum value for field type.
@@ -147,7 +153,10 @@ public class Field {
     public String validate() {
         for (FieldValidator validator : validators) {
             String error = validator.validate(getValue());
+            hilit = new DefaultHighlighter();
+            painter = new DefaultHighlighter.DefaultHighlightPainter(ERROR_COLOR);
             if (!error.isEmpty()) {
+                this.textField.setHighlighter(hilit);
                 return error;
             }
         }
