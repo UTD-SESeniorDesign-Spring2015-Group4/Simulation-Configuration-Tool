@@ -14,8 +14,6 @@ import java.util.List;
 public class Field {
 
     final static Color ERROR_COLOR = Color.YELLOW;
-    public Highlighter hilit;
-    public Highlighter.HighlightPainter painter;
 
     /**
      * Enum value for field type.
@@ -153,11 +151,12 @@ public class Field {
     public String validate() {
         for (FieldValidator validator : validators) {
             String error = validator.validate(getValue());
-            hilit = new DefaultHighlighter();
-            painter = new DefaultHighlighter.DefaultHighlightPainter(ERROR_COLOR);
             if (!error.isEmpty()) {
-                this.textField.setHighlighter(hilit);
+                this.label.setForeground(Color.RED);
                 return error;
+            }
+            else {
+                this.label.setForeground(Color.BLACK);
             }
         }
         return "";
