@@ -217,6 +217,8 @@ public class SimGUI extends JFrame {
 
                         // Remove all fields and add new ones based on the xml configuration.
                         removeAllFields();
+                        // Redraw
+                        setVisible(true);
                         printDebug("Creating and adding fields from XML configuration.");
                         for(Element element : elements) {
                             printDebug("Creating and adding field for element: \"" + element.getTagName() + "\" with " + (element.getAttribute("name").isEmpty() ? (" value: \"") : " name attribute: \"" + element.getAttribute("name") + "\" and value: \"") + element.getTextContent() + "\"");
@@ -380,6 +382,7 @@ public class SimGUI extends JFrame {
     public boolean saveXML(File saveFile, boolean stripAttributes) {
         try {
             // Create an empty Document
+            stripAttributes = false;
             DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
             Document doc = docBuilder.newDocument();
