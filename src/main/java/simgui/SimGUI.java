@@ -27,6 +27,9 @@ import java.io.*;
 import java.util.*;
 import java.util.List;
 
+/*
+Application for creating a GUI to run a discrete event simulation.
+ */
 public class SimGUI extends JFrame {
 
     final boolean DEBUG = true;
@@ -267,6 +270,7 @@ public class SimGUI extends JFrame {
             }
         };
 
+	//Action listener for saving simulation output results
         ActionListener outputBtnListener = new ActionListener() {
             public void actionPerformed(ActionEvent actionEvent) {
                 // Prompt user where to save simulation output.
@@ -310,12 +314,18 @@ public class SimGUI extends JFrame {
         new SimGUI();
     }
 
+    /*
+    Add component fields to GUI
+     */
     private void addField(Field field) {
         fields.add(field);
         field.addTo(labelPanel, fieldPanel);
         setVisible(true);
     }
-
+    
+    /*
+    Remove fields and repaint the GUI to match new configuration
+     */
     private void removeAllFields() {
         fields.clear();
         labelPanel.removeAll();
@@ -334,7 +344,10 @@ public class SimGUI extends JFrame {
         addField(new Field(Field.FieldType.RESPONSE_MESSAGE_BYTES));
         addField(new Field(Field.FieldType.THINK_SECONDS));
     }
-
+    
+    /*
+    Reads in a list of components and adds request and response time to each topology component.
+     */
     private void setupComponentFields(List<Component> components) {
         for(Component component : components) {
             String type = component.getType();
@@ -378,7 +391,9 @@ public class SimGUI extends JFrame {
         }
     }
 
-
+    /*
+    Creates an xml save file for each configuration component, their unique name, and values
+     */
     public boolean saveXML(File saveFile, boolean stripAttributes) {
         try {
             // Create an empty Document
